@@ -1,0 +1,55 @@
+/* Define Global Color Theme Variables based on image_6.png and image_8.png */
+:root {
+  /* Official NUM Branding Colors */
+  --num-white: #ffffff;
+  --num-navy: #0a122a; /* Main header and navy blue elements */
+  --num-oxblood: #800000; /* Maroon, border rings, and error elements */
+  --num-gold: #fdb813; /* For highlights and active states, from image_6 */
+  
+  /* Semantic Colors from old build screenshots */
+  --bg-main: #f8f9fa; /* Very subtle off-white background */
+  --bg-card: var(--num-white);
+  --text-primary: #212529; /* Main text */
+  --text-on-navy: var(--num-white);
+  --accent-action: var(--num-oxblood); /* Buttons, highlights */
+}
+
+/* Base Styles for entire app */body {
+  background-color: #f8f9fa;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+/* Ensures images in cards don't get squished */
+.card-img-top {
+  object-fit: cover;
+}
+/* Global input fields & textareas (clean, rounded corners, slight shadow) */
+input, select, textarea {
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 10px;
+  width: 100%;
+  box-sizing: border-box; /* Ensures padding is included in width */
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05); /* Soft inner shadow */
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--num-navy);
+  outline: none;
+  box-shadow: 0 0 0 0.2rem rgba(10, 18, 42, 0.2); /* Soft navy focus halo */
+}
+
+/* Simple button component */
+.btn {
+  display: inline-block;
+  padding: 12px 20px;
+  background-color: var(--num-navy);
+  color: white;
+  text-decoration: none;
+  border-radius: 5px;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+}
+.btn:hover { background-color: #001a3a; }
+.btn-primary { background-color: var(--num-oxblood); }
+.btn-primary:hover { background-color: #6a0000; }
