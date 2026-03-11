@@ -17,10 +17,10 @@
       <div class="col-lg-8">
         <div class="card shadow-sm border-0 rounded-4 mb-3 bg-white" v-for="(item, index) in cartItems" :key="index">
           <div class="card-body p-4 d-flex align-items-center">
-            <img :src="item.image_urls[0]" class="rounded-4 me-4 shadow-sm" style="width: 100px; height: 100px; object-fit: cover;" />
+            <img :src="item.image_urls && item.image_urls.length > 0 ? item.image_urls[0] : 'https://via.placeholder.com/100'" class="rounded-4 me-4 shadow-sm" style="width: 100px; height: 100px; object-fit: cover;" />
             <div class="flex-grow-1">
               <h5 class="fw-bold mb-1 text-dark">{{ item.title }}</h5>
-              <h5 class="fw-black mb-0" style="color: #800000;">₦{{ item.price.toLocaleString() }}</h5>
+              <h5 class="fw-black mb-0" style="color: #800000;">₦{{ Number(item.price).toLocaleString() }}</h5>
             </div>
             <button @click="removeItem(index)" class="btn btn-light text-danger rounded-circle p-2 shadow-sm" style="width: 45px; height: 45px;"><i class="bi bi-trash3-fill fs-5"></i></button>
           </div>
@@ -55,9 +55,18 @@ const currentUser = ref(null);
 const isProcessing = ref(false);
 
 onMounted(async () => { 
-  cartItems.value = JSON.parse(localStorage.getItem('num_bazaar_cart') || '[]'); 
+  // Safely parse the cart
+  try {
+    cartItems.value = JSON.parse(localStorage.getItem('num_bazaar_cart') || '[]'); 
+  } catch (e) {
+    cartItems.value = [];
+  }
+
+  // Fetch the logged-in user
   const { data } = await supabase.auth.getSession(); 
-  currentUser.value = data.session?.user 
+  if (data?.session) {
+    currentUser.value = data.session.user;
+  }
 })
 
 const subtotal = computed(() => cartItems.value.reduce((total, item) => total + Number(item.price), 0))
@@ -67,20 +76,19 @@ const removeItem = (i) => { cartItems.value.splice(i, 1); localStorage.setItem('
 
 const processMultiCheckout = () => {
   if (!currentUser.value) return alert("Please sign in to checkout!");
-  if (!window.PaystackPop) return alert("Payment system is loading.");
+  if (!window.PaystackPop) return alert("Payment system is loading. Check your internet connection or refresh the page.");
+  
   isProcessing.value = true;
 
   const handler = window.PaystackPop.setup({
     key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
-    email: currentUser.value.email,
+    email: currentUser.value?.email, // Added safety check here
     amount: grandTotal.value * 100, 
     currency: 'NGN',
     ref: 'NUM_' + Math.floor(Math.random() * 1000000000),
-    // FIX: Standard function
     callback: function(response) {
       const splitFee = platformFee.value / cartItems.value.length; 
       
-      // Map over items and create an array of database promises
       const orderPromises = cartItems.value.map(item => {
         return supabase.from('orders').insert([{ 
           buyer_id: currentUser.value.id, seller_id: item.seller_id, product_id: item.id, 
@@ -101,16 +109,15 @@ const processMultiCheckout = () => {
         });
       });
 
-      // Execute all database updates, then finish
       Promise.all(orderPromises)
         .then(() => {
           localStorage.removeItem('num_bazaar_cart'); 
           alert("Payment successful! Funds secured in Escrow.");
           isProcessing.value = false;
-          router.push(`/profile/${currentUser.value.id}`);
+          router.push(`/profile/${currentUser.value.id}`); 
         })
         .catch(err => {
-          alert("Error saving order. Contact support with Ref: " + response.reference);
+          alert("Error saving order to database. Contact support with Ref: " + response.reference);
           isProcessing.value = false;
         });
     },
@@ -121,43 +128,4 @@ const processMultiCheckout = () => {
   });
   handler.openIframe();
 }
-
-  const handler = window.PaystackPop.setup({
-    key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
-    email: currentUser.value.email,
-    amount: grandTotal.value * 100, // Paystack uses Kobo
-    currency: 'NGN',
-    ref: 'NUM_' + Math.floor(Math.random() * 1000000000),
-    callback: async function(response) {
-      try {
-        const splitFee = platformFee.value / cartItems.value.length; // Spread fee across orders for records
-        
-        for (const item of cartItems.value) {
-          // 1. Create Order
-          await supabase.from('orders').insert([{ 
-            buyer_id: currentUser.value.id, seller_id: item.seller_id, product_id: item.id, 
-            product_name: item.title, product_image: item.image_urls[0], product_price: item.price, 
-            platform_fee: splitFee, total_amount: item.price + splitFee, 
-            status: 'Paid (In Escrow)', paystack_reference: response.reference 
-          }]);
-
-          // 2. Lock money in Seller's Escrow Account
-          const { data: seller } = await supabase.from('profiles').select('escrow_balance').eq('id', item.seller_id).single();
-          await supabase.from('profiles').update({ escrow_balance: Number(seller.escrow_balance || 0) + Number(item.price) }).eq('id', item.seller_id);
-
-          // 3. Log Financial Transaction Ledger
-          await supabase.from('transactions').insert([{
-            profile_id: item.seller_id, amount: item.price, type: 'credit', description: `Funds locked in Escrow - ${item.title}`
-          }]);
-        }
-        
-        localStorage.removeItem('num_bazaar_cart'); 
-        alert("Payment successful! Funds secured in Escrow.");
-        router.push(`/profile/${currentUser.value.id}`); // Send to profile to see the Escrow purchases
-      } catch (err) { alert("Error saving order. Contact support with Ref: " + response.reference); }
-    },
-    onClose: function() { isProcessing.value = false; alert('Payment cancelled.'); }
-  });
-  handler.openIframe();
-
 </script>
