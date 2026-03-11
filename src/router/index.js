@@ -20,8 +20,18 @@ const router = createRouter({
     { path: '/product/:id', name: 'product', component: ProductView },
     { path: '/cart', name: 'cart', component: CartView },
     { path: '/dashboard', name: 'dashboard', component: DashboardView },
-    { path: '/profile/:id', name: 'profile', component: ProfileView },
-    { path: '/admin', name: 'admin', component: AdminView }
+    { path: '/admin', name: 'admin', component: () => import('../views/AdminView.vue')},
+    { path: '/admin', name: 'admin', component: AdminView },
+    {
+      path: '/vendor/:id',
+      name: 'vendorProfile',
+      component: () => import('../views/VendorProfileView.vue')
+    },
+    {
+      path: '/product/:id',
+      name: 'productDetail',
+      component: () => import('../views/ProductView.vue')
+    },
   ]
 })
 

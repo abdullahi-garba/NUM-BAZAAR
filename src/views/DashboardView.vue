@@ -69,15 +69,27 @@
             <div class="card shadow-sm border-0 rounded-4 bg-white">
               <div class="card-header bg-white border-bottom p-4"><h5 class="fw-bold mb-0">Transaction Ledger</h5></div>
               <div v-if="transactions.length === 0" class="p-5 text-center text-muted"><i class="bi bi-receipt fs-1 mb-2 d-block"></i><p>No transactions yet.</p></div>
+              
               <ul v-else class="list-group list-group-flush">
                 <li v-for="txn in transactions" :key="txn.id" class="list-group-item p-4 d-flex justify-content-between align-items-center">
                   <div class="d-flex align-items-center">
-                    <div :class="txn.type === 'credit' ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'" class="rounded-circle p-3 me-3"><i class="bi fs-5" :class="txn.type === 'credit' ? 'bi-arrow-down-left' : 'bi-arrow-up-right'"></i></div>
-                    <div><h6 class="fw-bold mb-0">{{ txn.description }}</h6><small class="text-muted">{{ new Date(txn.created_at).toLocaleString() }}</small></div>
+                    
+                    <div v-if="txn.description.includes('[ESCROW CLEARED]')" class="bg-success-subtle text-success rounded-circle p-3 me-3"><i class="bi bi-check-circle-fill fs-5"></i></div>
+                    <div v-else-if="txn.type === 'debit'" class="bg-danger-subtle text-danger rounded-circle p-3 me-3"><i class="bi bi-arrow-up-right fs-5"></i></div>
+                    <div v-else class="bg-warning-subtle text-warning rounded-circle p-3 me-3"><i class="bi bi-shield-lock-fill fs-5"></i></div>
+                    
+                    <div>
+                      <h6 class="fw-bold mb-0 text-dark">{{ txn.description }}</h6>
+                      <small class="text-muted">{{ new Date(txn.created_at).toLocaleString() }}</small>
+                    </div>
                   </div>
-                  <h6 class="fw-bold mb-0" :class="txn.type === 'credit' ? 'text-success' : 'text-danger'">{{ txn.type === 'credit' ? '+' : '-' }} ₦{{ Number(txn.amount).toLocaleString() }}</h6>
+                  
+                  <h6 class="fw-black mb-0" :class="txn.type === 'debit' ? 'text-danger' : (txn.description.includes('[ESCROW CLEARED]') ? 'text-success' : 'text-warning')">
+                    {{ txn.type === 'debit' ? '-' : '+' }} ₦{{ Number(txn.amount).toLocaleString() }}
+                  </h6>
                 </li>
               </ul>
+
             </div>
           </div>
 

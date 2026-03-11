@@ -25,40 +25,81 @@
         </div>
 
         <ul class="nav nav-tabs fw-bold mb-4 border-bottom-0" role="tablist">
-          <li class="nav-item"><button class="nav-link active px-4 py-3 border-0 rounded-top-4" data-bs-toggle="tab" data-bs-target="#purchases" type="button" style="background-color: #e9ecef; color: #082b59;"><i class="bi bi-bag-check-fill me-2"></i> My Purchases (Escrow)</button></li>
+          <li class="nav-item"><button class="nav-link active px-4 py-3 border-0 rounded-top-4" data-bs-toggle="tab" data-bs-target="#purchases" type="button" style="background-color: #e9ecef; color: #082b59;"><i class="bi bi-bag-check-fill me-2"></i> My Purchases</button></li>
           <li class="nav-item"><button class="nav-link px-4 py-3 border-0 rounded-top-4 ms-2" data-bs-toggle="tab" data-bs-target="#settings" type="button" style="background-color: #e9ecef; color: #6c757d;"><i class="bi bi-gear-fill me-2"></i> Profile Settings</button></li>
         </ul>
 
         <div class="tab-content">
           <div class="tab-pane fade show active" id="purchases" role="tabpanel">
-            <div class="card shadow-sm border-0 rounded-4 p-4 bg-white">
-              <h5 class="fw-bold mb-4 border-bottom pb-3 text-dark">Active Escrow Orders</h5>
-              <div v-if="buyerOrders.length === 0" class="text-center text-muted py-5"><i class="bi bi-bag-x fs-1 d-block mb-3"></i><p>You have no active orders.</p></div>
-              <div v-for="order in buyerOrders" :key="order.id" class="card border border-warning shadow-sm rounded-4 mb-3 overflow-hidden">
-                <div class="card-header fw-bold border-0 py-3" :class="order.status === 'Paid (In Escrow)' ? 'bg-warning-subtle text-dark' : 'bg-success-subtle text-success'">
-                  <i :class="order.status === 'Paid (In Escrow)' ? 'bi-shield-lock-fill text-warning' : 'bi-check-circle-fill text-success'" class="me-2"></i> {{ order.status }}
+            
+            <div class="card shadow-sm border-0 rounded-4 p-4 bg-white mb-4">
+              <h5 class="fw-bold mb-4 border-bottom pb-3 text-dark"><i class="bi bi-shield-lock text-warning me-2"></i> Action Required (Active Escrow)</h5>
+              
+              <div v-if="activeOrders.length === 0" class="text-center text-muted py-4">
+                <i class="bi bi-check-circle fs-1 d-block mb-2 text-success"></i><p>All clear! No pending items to confirm.</p>
+              </div>
+              
+              <div v-for="order in activeOrders" :key="order.id" class="card border border-warning shadow-sm rounded-4 mb-3 overflow-hidden">
+                <div class="card-header fw-bold border-0 py-3 bg-warning-subtle text-dark">
+                  <i class="bi bi-shield-lock-fill text-warning me-2"></i> Paid (Funds Locked in Escrow)
                 </div>
                 <div class="card-body p-4 d-flex flex-column flex-md-row align-items-center justify-content-between">
                   <div class="d-flex align-items-center mb-3 mb-md-0">
                     <img :src="order.product_image" class="bg-light rounded-3 me-3" style="width: 80px; height: 80px; object-fit: cover;">
-                    <div><h5 class="fw-bold mb-1">{{ order.product_name }}</h5><h6 class="text-danger fw-black mb-1">₦{{ Number(order.product_price).toLocaleString() }}</h6><small class="text-muted">Purchased on {{ new Date(order.created_at).toLocaleDateString() }}</small></div>
+                    <div>
+                      <h5 class="fw-bold mb-1">{{ order.product_name }}</h5>
+                      <h6 class="text-danger fw-black mb-1">₦{{ Number(order.product_price).toLocaleString() }}</h6>
+                      <small class="text-muted">Purchased: {{ new Date(order.created_at).toLocaleDateString() }}</small>
+                    </div>
                   </div>
-                  <div v-if="order.status === 'Paid (In Escrow)'" class="text-center text-md-end">
+                  <div class="text-center text-md-end">
                     <p class="small text-muted mb-2">Did you receive this item?</p>
-                    <button class="btn btn-success fw-bold rounded-pill px-4 shadow-sm" @click="confirmReceipt(order)"><i class="bi bi-check-circle-fill me-2"></i> Confirm & Release Funds</button>
+                    <button class="btn btn-success fw-bold rounded-pill px-4 shadow-sm" @click="confirmReceipt(order)" :disabled="isProcessing">
+                      <i class="bi bi-check-circle-fill me-2"></i> Confirm & Release Funds
+                    </button>
                   </div>
-                  <div v-else-if="order.status === 'Completed (Funds Released)'" class="w-100 mt-3 border-top pt-3">
-                    <div v-if="activeReviewOrderId !== order.id" class="text-end"><button @click="activeReviewOrderId = order.id" class="btn btn-outline-dark btn-sm fw-bold rounded-pill px-4">Leave a Review</button></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card shadow-sm border-0 rounded-4 p-4 bg-white">
+              <h5 class="fw-bold mb-4 border-bottom pb-3 text-dark"><i class="bi bi-bag-check text-success me-2"></i> Successful Purchases</h5>
+              
+              <div v-if="completedOrders.length === 0" class="text-center text-muted py-4"><p>Your completed orders will appear here.</p></div>
+              
+              <div v-for="order in completedOrders" :key="order.id" class="card border border-success shadow-sm rounded-4 mb-3 overflow-hidden opacity-75">
+                <div class="card-body p-4 d-flex flex-column flex-md-row align-items-center justify-content-between">
+                  <div class="d-flex align-items-center mb-3 mb-md-0">
+                    <img :src="order.product_image" class="bg-light rounded-3 me-3" style="width: 60px; height: 60px; object-fit: cover; filter: grayscale(50%);">
+                    <div>
+                      <h6 class="fw-bold mb-1 text-success"><i class="bi bi-check-all"></i> Escrow Cleared</h6>
+                      <h6 class="fw-bold mb-1">{{ order.product_name }}</h6>
+                    </div>
+                  </div>
+                  <div class="w-100 mt-3 mt-md-0 ms-md-4">
+                    <div v-if="activeReviewOrderId !== order.id" class="text-end">
+                      <button @click="activeReviewOrderId = order.id" class="btn btn-outline-dark btn-sm fw-bold rounded-pill px-4">Leave a Review</button>
+                    </div>
                     <div v-else class="bg-light p-3 rounded-4 mt-2">
                        <h6 class="fw-bold mb-2">Rate this product</h6>
-                       <select v-model="reviewForm.rating" class="form-select mb-2"><option value="5">⭐⭐⭐⭐⭐ (5/5) Excellent</option><option value="4">⭐⭐⭐⭐ (4/5) Good</option><option value="3">⭐⭐⭐ (3/5) Average</option><option value="2">⭐⭐ (2/5) Poor</option><option value="1">⭐ (1/5) Terrible</option></select>
+                       <select v-model="reviewForm.rating" class="form-select mb-2">
+                         <option value="5">⭐⭐⭐⭐⭐ (5/5) Excellent</option>
+                         <option value="4">⭐⭐⭐⭐ (4/5) Good</option>
+                         <option value="3">⭐⭐⭐ (3/5) Average</option>
+                         <option value="2">⭐⭐ (2/5) Poor</option>
+                         <option value="1">⭐ (1/5) Terrible</option>
+                       </select>
                        <textarea v-model="reviewForm.comment" class="form-control mb-2" placeholder="Tell others about your experience..." rows="2"></textarea>
-                       <div class="d-flex justify-content-end gap-2"><button @click="activeReviewOrderId = null" class="btn btn-sm btn-secondary fw-bold rounded-pill px-3">Cancel</button><button @click="submitReview(order)" class="btn btn-sm btn-primary fw-bold rounded-pill px-4" style="background-color: #082b59; border: none;">Submit Review</button></div>
+                       <div class="d-flex justify-content-end gap-2">
+                         <button @click="activeReviewOrderId = null" class="btn btn-sm btn-secondary fw-bold rounded-pill px-3">Cancel</button>
+                         <button @click="submitReview(order)" class="btn btn-sm btn-primary fw-bold rounded-pill px-4" style="background-color: #082b59; border: none;">Submit Review</button>
+                       </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
+
           </div>
 
           <div class="tab-pane fade" id="settings" role="tabpanel">
@@ -98,22 +139,24 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { supabase } from '../lib/supabaseClient'
 
 const route = useRoute(); const profileId = route.params.id
 const userProfile = ref(null); const buyerOrders = ref([]); const isLoading = ref(true)
-const isSaving = ref(false)
+const isProcessing = ref(false); const isSaving = ref(false)
+
+// Separating Active vs Completed
+const activeOrders = computed(() => buyerOrders.value.filter(o => o.status === 'Paid (In Escrow)'))
+const completedOrders = computed(() => buyerOrders.value.filter(o => o.status === 'Completed (Funds Released)'))
 
 // Edit Form State
 const editForm = ref({ phone_number: '', campus_affiliation: '', business_name: '', business_sector: '', business_desc: '' })
-const newProfilePic = ref(null)
-const newCoverPic = ref(null)
+const newProfilePic = ref(null); const newCoverPic = ref(null)
 
 // Review State
-const activeReviewOrderId = ref(null);
-const reviewForm = ref({ rating: 5, comment: '' });
+const activeReviewOrderId = ref(null); const reviewForm = ref({ rating: 5, comment: '' });
 
 const fetchProfileData = async () => {
   isLoading.value = true
@@ -122,13 +165,9 @@ const fetchProfileData = async () => {
   
   if (data) {
     userProfile.value = data
-    // Populate the form with existing data
     editForm.value = { 
-      phone_number: data.phone_number || '', 
-      campus_affiliation: data.campus_affiliation || 'Student',
-      business_name: data.business_name || '',
-      business_sector: data.business_sector || 'Other',
-      business_desc: data.business_desc || ''
+      phone_number: data.phone_number || '', campus_affiliation: data.campus_affiliation || 'Student',
+      business_name: data.business_name || '', business_sector: data.business_sector || 'Other', business_desc: data.business_desc || ''
     }
     
     if (sessionData.session?.user.id === profileId) {
@@ -142,52 +181,60 @@ const fetchProfileData = async () => {
 const saveProfile = async () => { 
   isSaving.value = true
   let updates = { ...editForm.value }
-
   try {
-    // 1. Handle New Profile Picture Upload
     if (newProfilePic.value) {
       const pName = `prof_${profileId}_${Date.now()}`
       await supabase.storage.from('user-profiles').upload(pName, newProfilePic.value)
       updates.profile_image = supabase.storage.from('user-profiles').getPublicUrl(pName).data.publicUrl
     }
-    
-    // 2. Handle New Cover Photo Upload
     if (newCoverPic.value) {
       const cName = `cov_${profileId}_${Date.now()}`
       await supabase.storage.from('user-profiles').upload(cName, newCoverPic.value)
       updates.cover_image = supabase.storage.from('user-profiles').getPublicUrl(cName).data.publicUrl
     }
-
-    // 3. Save everything to the database
     await supabase.from('profiles').update(updates).eq('id', profileId)
-    
     alert('Profile Updated Successfully!')
-    // Reset file inputs
-    newProfilePic.value = null
-    newCoverPic.value = null
-    // Refresh the UI to show new images/text
+    newProfilePic.value = null; newCoverPic.value = null;
     await fetchProfileData()
-  } catch (err) {
-    alert("Error saving profile details.")
-    console.error(err)
-  } finally {
-    isSaving.value = false
-  }
+  } catch (err) { alert("Error saving profile details."); console.error(err); } 
+  finally { isSaving.value = false }
 }
 
-// Escrow & Review Logic (Unchanged)
+// THE BULLETPROOF ESCROW MATH & LEDGER INSERT
 const confirmReceipt = async (order) => {
-  if(!confirm("Are you absolutely sure you received this item? This releases the funds to the seller's wallet and cannot be undone.")) return;
+  if(!confirm("Release funds to the seller's wallet? This cannot be undone.")) return;
+  isProcessing.value = true;
+  
   try {
+    // 1. Mark Order as Complete
     await supabase.from('orders').update({ status: 'Completed (Funds Released)' }).eq('id', order.id);
+
+    // 2. Fetch Seller's precise current balances
     const { data: seller } = await supabase.from('profiles').select('escrow_balance, wallet_balance').eq('id', order.seller_id).single();
-    const newEscrow = Number(seller.escrow_balance) - Number(order.product_price);
+    
+    // 3. The Math: Deduct from Escrow (preventing negative numbers), Add to Wallet
+    const newEscrow = Math.max(0, Number(seller.escrow_balance) - Number(order.product_price));
     const newWallet = Number(seller.wallet_balance) + Number(order.product_price);
+
+    // 4. Save Balances
     await supabase.from('profiles').update({ escrow_balance: newEscrow, wallet_balance: newWallet }).eq('id', order.seller_id);
-    await supabase.from('transactions').insert([{ profile_id: order.seller_id, amount: order.product_price, type: 'credit', description: `Escrow Released to Wallet - ${order.product_name}` }]);
-    alert("Awesome! The funds have been released to the seller.");
-    await fetchProfileData(); 
-  } catch (err) { alert("Error releasing funds."); console.error(err); }
+
+    // 5. Create a detailed Ledger Receipt for the Seller
+    await supabase.from('transactions').insert([{ 
+      profile_id: order.seller_id, 
+      amount: order.product_price, 
+      type: 'credit', 
+      description: `[ESCROW CLEARED] Funds moved to Available Wallet - ${order.product_name}` 
+    }]);
+
+    alert("Success! The item is cleared and funds were released.");
+    await fetchProfileData(); // Refresh UI to move item to Completed list
+  } catch (err) { 
+    alert("Error communicating with Escrow Database."); 
+    console.error(err); 
+  } finally {
+    isProcessing.value = false;
+  }
 }
 
 const submitReview = async (order) => {
