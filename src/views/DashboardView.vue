@@ -101,7 +101,7 @@
               <p class="text-muted mb-4">You need an active 30-day seller subscription to upload new merchandise.</p>
               
               <button @click="processSubscription" :disabled="isProcessingSub" class="btn btn-primary fw-bold rounded-pill px-5" style="background-color: #082b59; border: none;">
-                {{ isProcessingSub ? 'Loading Paystack...' : 'Subscribe (₦1,000 / 30 Days)' }}
+                {{ isProcessingSub ? 'Loading Paystack...' : 'Subscribe (₦2,000 / 30 Days)' }}
               </button>
             </div>
 
@@ -184,7 +184,7 @@ const isLoading = ref(true)
 const currentUser = ref(null)
 const userProfile = ref({})
 const hasActiveSubscription = ref(false)
-const isProcessingSub = ref(false) // Added loading state for subscription button
+const isProcessingSub = ref(false)
 
 // Financials & Bank Details
 const isWithdrawing = ref(false)
@@ -216,7 +216,6 @@ const fetchDashboardData = async () => {
         account_number: profile.account_number || '', 
         account_name: profile.account_name || '' 
       }
-      // Check if subscription is valid (exists and hasn't expired)
       hasActiveSubscription.value = profile.is_subscribed && profile.subscription_expires_at && (new Date(profile.subscription_expires_at) > new Date())
     }
 
@@ -244,18 +243,17 @@ const processSubscription = async () => {
     const handler = window.PaystackPop.setup({
       key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
       email: currentUser.value.email,
-      amount: 1000 * 100, // ₦1,000 converted to kobo
+      // FIXED: Adjusted to 2000 Naira
+      amount: 2000 * 100, 
       currency: 'NGN',
       ref: 'SUB_NUM_' + Math.floor((Math.random() * 1000000000) + 1),
       
       callback: function(response) {
         const completeDatabaseUpdates = async () => {
           try {
-            // Calculate expiry date exactly 30 days from right now
             const expiryDate = new Date();
             expiryDate.setDate(expiryDate.getDate() + 30);
 
-            // Update the profile in Supabase to unlock the storefront
             const { error: dbError } = await supabase.from('profiles')
               .update({ 
                 is_subscribed: true, 
@@ -266,8 +264,6 @@ const processSubscription = async () => {
             if (dbError) throw new Error(dbError.message)
 
             alert("Subscription Successful! Your storefront is now unlocked for 30 days.")
-            
-            // Instantly unlock the UI without refreshing the page
             hasActiveSubscription.value = true
             
           } catch (error) {
