@@ -18,7 +18,7 @@
                 <h2 class="fw-bold mb-0 text-white shadow-sm">{{ userProfile?.first_name }} {{ userProfile?.last_name }} 
                   <span class="fs-5 fw-normal text-warning ms-2">@{{ userProfile?.username }}</span>
                 </h2>
-                <span class="badge bg-light text-dark mt-2 px-3 py-1 rounded-pill">{{ userProfile?.role.toUpperCase() }}</span>
+                <span class="badge bg-light text-dark mt-2 px-3 py-1 rounded-pill">{{ userProfile?.role?.toUpperCase() || 'USER' }}</span>
               </div>
             </div>
           </div>
@@ -147,15 +147,12 @@ const route = useRoute(); const profileId = route.params.id
 const userProfile = ref(null); const buyerOrders = ref([]); const isLoading = ref(true)
 const isProcessing = ref(false); const isSaving = ref(false)
 
-// Separating Active vs Completed
 const activeOrders = computed(() => buyerOrders.value.filter(o => o.status === 'Paid (In Escrow)'))
 const completedOrders = computed(() => buyerOrders.value.filter(o => o.status === 'Completed (Funds Released)'))
 
-// Edit Form State
 const editForm = ref({ phone_number: '', campus_affiliation: '', business_name: '', business_sector: '', business_desc: '' })
 const newProfilePic = ref(null); const newCoverPic = ref(null)
 
-// Review State
 const activeReviewOrderId = ref(null); const reviewForm = ref({ rating: 5, comment: '' });
 
 const fetchProfileData = async () => {
@@ -200,41 +197,28 @@ const saveProfile = async () => {
   finally { isSaving.value = false }
 }
 
-// THE BULLETPROOF ESCROW MATH & LEDGER INSERT
 const confirmReceipt = async (order) => {
   if(!confirm("Release funds to the seller's wallet? This cannot be undone.")) return;
   isProcessing.value = true;
   
   try {
-    // 1. Mark Order as Complete
     await supabase.from('orders').update({ status: 'Completed (Funds Released)' }).eq('id', order.id);
-
-    // 2. Fetch Seller's precise current balances
     const { data: seller } = await supabase.from('profiles').select('escrow_balance, wallet_balance').eq('id', order.seller_id).single();
     
-    // 3. The Math: Deduct from Escrow (preventing negative numbers), Add to Wallet
     const newEscrow = Math.max(0, Number(seller.escrow_balance) - Number(order.product_price));
     const newWallet = Number(seller.wallet_balance) + Number(order.product_price);
 
-    // 4. Save Balances
     await supabase.from('profiles').update({ escrow_balance: newEscrow, wallet_balance: newWallet }).eq('id', order.seller_id);
 
-    // 5. Create a detailed Ledger Receipt for the Seller
     await supabase.from('transactions').insert([{ 
-      profile_id: order.seller_id, 
-      amount: order.product_price, 
-      type: 'credit', 
+      profile_id: order.seller_id, amount: order.product_price, type: 'credit', 
       description: `[ESCROW CLEARED] Funds moved to Available Wallet - ${order.product_name}` 
     }]);
 
     alert("Success! The item is cleared and funds were released.");
-    await fetchProfileData(); // Refresh UI to move item to Completed list
-  } catch (err) { 
-    alert("Error communicating with Escrow Database."); 
-    console.error(err); 
-  } finally {
-    isProcessing.value = false;
-  }
+    await fetchProfileData();
+  } catch (err) { alert("Error communicating with Escrow Database."); console.error(err); } 
+  finally { isProcessing.value = false; }
 }
 
 const submitReview = async (order) => {

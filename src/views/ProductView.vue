@@ -57,7 +57,12 @@
               <small class="text-muted">@{{ seller.username }}</small>
             </div>
           </div>
-          <router-link :to="`/vendor/${seller.id}`" class="btn btn-outline-dark btn-sm fw-bold rounded-pill w-100">View Vendor Profile</router-link>
+          <div class="d-flex gap-2 mt-3">
+            <router-link :to="`/vendor/${seller.id}`" class="btn btn-outline-dark btn-sm fw-bold rounded-pill w-100">View Profile</router-link>
+            <router-link :to="`/messages?new_chat=${seller.id}`" class="btn btn-primary btn-sm fw-bold rounded-pill w-100" style="background-color: #082b59; border: none;">
+              <i class="bi bi-chat-text-fill me-1"></i> Message
+            </router-link>
+          </div>
         </div>
       </div>
     </div>
@@ -118,13 +123,11 @@ const fetchProductData = async () => {
 
 const addToCart = () => {
   let cart = JSON.parse(localStorage.getItem('num_bazaar_cart') || '[]')
-  // Check if item already exists to prevent duplicates (optional, but good UX)
   if (cart.some(item => item.id === product.value.id)) {
     return alert("Item is already in your cart!")
   }
   cart.push(product.value)
   localStorage.setItem('num_bazaar_cart', JSON.stringify(cart))
-  // Dispatch event so the navbar instantly updates the red badge
   window.dispatchEvent(new Event('storage'))
   alert('Added to Cart securely!')
 }

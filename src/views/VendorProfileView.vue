@@ -16,11 +16,11 @@
             <div class="d-flex flex-column flex-md-row align-items-md-end mb-3">
               <img v-if="vendor.profile_image" :src="vendor.profile_image" class="rounded-circle border border-4 border-white shadow bg-white mb-3 mb-md-0 me-md-4" style="width: 120px; height: 120px; object-fit: cover;">
               <div v-else class="bg-light text-primary rounded-circle d-flex justify-content-center align-items-center mb-3 mb-md-0 me-md-4 shadow border border-4 border-white" style="width: 120px; height: 120px; font-size: 3rem; font-weight: bold;">
-                {{ vendor.business_name ? vendor.business_name.charAt(0) : vendor.first_name.charAt(0) }}
+                {{ vendor?.business_name?.charAt(0) || vendor?.first_name?.charAt(0) || 'V' }}
               </div>
               
               <div class="pb-2 flex-grow-1">
-                <h2 class="fw-black mb-0 text-dark">{{ vendor.business_name || (vendor.first_name + ' ' + vendor.last_name) }}
+                <h2 class="fw-black mb-0 text-dark">{{ vendor?.business_name || (vendor?.first_name + ' ' + vendor?.last_name) || 'Campus Vendor' }}
                   <span v-if="vendor.is_subscribed" class="ms-2 fs-5 text-success"><i class="bi bi-patch-check-fill"></i></span>
                 </h2>
                 <p class="text-muted mb-2 fw-semibold">@{{ vendor.username }} • {{ vendor.campus_affiliation }}</p>
@@ -105,20 +105,16 @@ const averageRating = computed(() => {
 const fetchVendorData = async () => {
   isLoading.value = true
   
-  // 1. Fetch Profile
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', vendorId).single()
   vendor.value = profile
 
   if (profile) {
-    // 2. Fetch Active Products
     const { data: products } = await supabase.from('products').select('*').eq('seller_id', vendorId).eq('is_approved', true)
     activeProducts.value = products || []
 
-    // 3. Fetch Completed Orders (Proof of trust)
     const { data: orders } = await supabase.from('orders').select('*').eq('seller_id', vendorId).eq('status', 'Completed (Funds Released)').order('created_at', { ascending: false }).limit(10)
     completedOrders.value = orders || []
 
-    // 4. Fetch Reviews attached to their products
     if (products && products.length > 0) {
       const productIds = products.map(p => p.id)
       const { data: revs } = await supabase.from('reviews').select('rating').in('product_id', productIds)

@@ -3,38 +3,6 @@
     
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3 border-bottom pb-3">
       <div><h2 class="fw-black mb-0" style="color: #082b59; font-size: 2.2rem;">Campus Feed</h2></div>
-      
-      <button v-if="['seller', 'admin'].includes(userRole)" @click="showUploadForm = !showUploadForm" class="btn btn-primary fw-bold px-4 py-2 rounded-pill shadow-sm" style="background-color: #082b59; border: none;">
-        <i class="bi" :class="showUploadForm ? 'bi-x-lg' : 'bi-plus-lg'"></i> {{ showUploadForm ? 'Close Setup' : 'Sell an Item' }}
-      </button>
-    </div>
-
-    <div v-if="['seller', 'admin'].includes(userRole) && showUploadForm" class="card shadow-lg border-0 rounded-4 mb-5 bg-white overflow-hidden">
-      <div class="card-header bg-dark text-white p-4 border-0"><h5 class="fw-bold mb-0"><i class="bi bi-box-seam me-2"></i>New Listing Setup</h5></div>
-      
-      <div v-if="!hasActiveSubscription && userRole !== 'admin'" class="card-body p-5 text-center">
-        <i class="bi bi-lock-fill text-danger fs-1 mb-3 d-block"></i>
-        <h4 class="fw-bold">Storefront Locked</h4>
-        <p class="text-muted mb-4">You need an active 30-day seller subscription to upload new merchandise.</p>
-        <router-link to="/dashboard" class="btn btn-primary fw-bold rounded-pill px-5" style="background-color: #082b59; border: none;">Go to Verification Hub</router-link>
-      </div>
-
-      <div v-else class="card-body p-4 p-md-5">
-        <form @submit.prevent="publishProduct" class="row g-4">
-          <div class="col-md-6"><label class="fw-bold text-muted small text-uppercase">Product Title</label><input type="text" class="form-control form-control-lg bg-light border-0" v-model="newProduct.name" required></div>
-          <div class="col-md-3"><label class="fw-bold text-muted small text-uppercase">Price (₦)</label><input type="number" class="form-control form-control-lg bg-light border-0" v-model="newProduct.price" required></div>
-          <div class="col-md-3">
-            <label class="fw-bold text-muted small text-uppercase">Category</label>
-            <select class="form-select form-select-lg bg-light border-0" v-model="newProduct.category" required>
-              <option>Food & Beverages</option><option>IT & Tech</option><option>Fashion & Clothing</option><option>Textbooks</option><option>Services</option><option>Other</option>
-            </select>
-          </div>
-          <div class="col-md-6"><label class="fw-bold text-muted small text-uppercase">Upload Images (Select Multiple)</label><input type="file" class="form-control form-control-lg bg-light border-0" @change="e => imageFiles = Array.from(e.target.files)" accept="image/*" multiple required></div>
-          <div class="col-md-6"><label class="fw-bold text-muted small text-uppercase">Search Tags (Comma separated)</label><input type="text" class="form-control form-control-lg bg-light border-0" v-model="newProduct.tagsStr" placeholder="e.g. macbook, laptop, used"></div>
-          <div class="col-12"><label class="fw-bold text-muted small text-uppercase">Detailed Description</label><textarea class="form-control bg-light border-0" v-model="newProduct.description" rows="3" required></textarea></div>
-          <div class="col-12 text-end"><button type="submit" class="btn btn-primary btn-lg fw-bold px-5 rounded-pill shadow" :disabled="isUploading" style="background-color: #082b59; border: none;">{{ isUploading ? 'Uploading...' : 'Push to Live Feed' }}</button></div>
-        </form>
-      </div>
     </div>
 
     <div class="row g-4">
@@ -131,77 +99,35 @@
 import { ref, computed, onMounted } from 'vue'
 import { supabase } from '../lib/supabaseClient'
 
-const products = ref([]); const isLoading = ref(true); const isUploading = ref(false)
-const currentUser = ref(null); const userRole = ref('buyer'); const showUploadForm = ref(false)
-const hasActiveSubscription = ref(false)
+const products = ref([]); const isLoading = ref(true);
 
-// New Product State
-const newProduct = ref({ name: '', price: '', category: 'Other', description: '', tagsStr: '' }); const imageFiles = ref([])
-
-// Filter States
 const searchQuery = ref(''); const selectedCategory = ref('All'); 
 const minPrice = ref(null); const maxPrice = ref(null); const sortBy = ref('newest')
 
 const fetchProducts = async () => {
   isLoading.value = true
-  const { data: sessionData } = await supabase.auth.getSession()
-  if (sessionData.session) {
-    currentUser.value = sessionData.session.user
-    const { data: profile } = await supabase.from('profiles').select('role, is_subscribed, subscription_expires_at').eq('id', sessionData.session.user.id).single()
-    if (profile) {
-      userRole.value = profile.role
-      hasActiveSubscription.value = profile.is_subscribed && profile.subscription_expires_at && (new Date(profile.subscription_expires_at) > new Date());
-    }
-  }
   const { data } = await supabase.from('products').select('*').eq('is_approved', true).order('created_at', { ascending: false })
   if (data) products.value = data
   isLoading.value = false
 }
 
-// THE FILTER ALGORITHM
 const filteredProducts = computed(() => {
   let result = products.value;
-
   if (selectedCategory.value !== 'All') result = result.filter(p => p.category === selectedCategory.value);
-  
   if (searchQuery.value) {
     const q = searchQuery.value.toLowerCase();
     result = result.filter(p => p.title.toLowerCase().includes(q) || (p.tags && p.tags.some(tag => tag.toLowerCase().includes(q))));
   }
-
   if (minPrice.value !== null && minPrice.value !== '') result = result.filter(p => p.price >= Number(minPrice.value));
   if (maxPrice.value !== null && maxPrice.value !== '') result = result.filter(p => p.price <= Number(maxPrice.value));
-
   if (sortBy.value === 'newest') result = result.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   else if (sortBy.value === 'price_asc') result = result.sort((a, b) => a.price - b.price);
   else if (sortBy.value === 'price_desc') result = result.sort((a, b) => b.price - a.price);
-
   return result;
 })
 
 const clearFilters = () => {
   searchQuery.value = ''; selectedCategory.value = 'All'; minPrice.value = null; maxPrice.value = null; sortBy.value = 'newest';
-}
-
-const publishProduct = async () => {
-  if (imageFiles.value.length === 0) return alert("Select at least one image.")
-  isUploading.value = true
-  try {
-    let uploadedUrls = []
-    for (const file of imageFiles.value) {
-      const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${file.name.split('.').pop()}`
-      await supabase.storage.from('product-images').upload(fileName, file)
-      uploadedUrls.push(supabase.storage.from('product-images').getPublicUrl(fileName).data.publicUrl)
-    }
-    
-    const tagsArray = newProduct.value.tagsStr.split(',').map(tag => tag.trim()).filter(tag => tag !== '');
-    await supabase.from('products').insert([{ title: newProduct.value.name, price: Number(newProduct.value.price), category: newProduct.value.category, description: newProduct.value.description, tags: tagsArray, image_urls: uploadedUrls, seller_id: currentUser.value.id }])
-    showUploadForm.value = false; alert("Listed! Waiting for Admin Approval.")
-    
-    // Clear form
-    newProduct.value = { name: '', price: '', category: 'Other', description: '', tagsStr: '' }; imageFiles.value = [];
-    await fetchProducts()
-  } catch (error) { alert(error.message) } finally { isUploading.value = false }
 }
 
 onMounted(() => fetchProducts())
