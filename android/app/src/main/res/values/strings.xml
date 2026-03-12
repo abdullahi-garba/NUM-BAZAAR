@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">NUM BAZAAR</string>
+    <string name="title_activity_main">NUM BAZAAR</string>
+    <string name="package_name">com.numbazaar.app</string>
+    <string name="custom_url_scheme">com.numbazaar.app</string>
+</resources>

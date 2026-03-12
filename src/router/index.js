@@ -1,65 +1,74 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '../views/HomeView.vue'
+import ShopView from '../views/ShopView.vue'
+import AuthView from '../views/AuthView.vue'
+import DashboardView from '../views/DashboardView.vue'
+import ProfileView from '../views/ProfileView.vue'
+import AdminView from '../views/AdminView.vue'
+import CartView from '../views/CartView.vue'
+import SupportView from '../views/SupportView.vue'
+import MessagesView from '../views/MessagesView.vue'
+import AboutView from '../views/AboutView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/',
-      name: 'home',
-      component: HomeView
-    },
-    {
-      path: '/auth',
-      name: 'auth',
-      component: () => import('../views/AuthView.vue')
+      redirect: '/shop'
     },
     {
       path: '/shop',
       name: 'shop',
-      component: () => import('../views/ShopView.vue')
+      component: ShopView
     },
     {
-      path: '/cart',
-      name: 'cart',
-      component: () => import('../views/CartView.vue')
+      path: '/auth',
+      name: 'auth',
+      component: AuthView
     },
     {
       path: '/dashboard',
       name: 'dashboard',
-      component: () => import('../views/DashboardView.vue')
-    },
-    {
-      path: '/admin',
-      name: 'admin',
-      component: () => import('../views/AdminView.vue')
+      component: DashboardView
     },
     {
       path: '/profile/:id',
       name: 'profile',
-      component: () => import('../views/ProfileView.vue')
+      component: ProfileView
     },
     {
-      path: '/vendor/:id',
-      name: 'vendorProfile',
-      component: () => import('../views/VendorProfileView.vue')
+      path: '/admin',
+      name: 'admin',
+      component: AdminView
     },
     {
-      path: '/product/:id',
-      name: 'productDetail',
-      component: () => import('../views/ProductView.vue')
+      path: '/cart',
+      name: 'cart',
+      component: CartView
     },
     {
       path: '/support',
       name: 'support',
-      component: () => import('../views/SupportView.vue')
+      component: SupportView
     },
     {
       path: '/messages',
       name: 'messages',
-      component: () => import('../views/MessagesView.vue')
+      component: MessagesView
+    },
+    {
+      path: '/about',
+      name: 'about',
+      component: AboutView
     }
-  ]
+  ],
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) {
+      return savedPosition
+    } else {
+      return { top: 0 }
+    }
+  }
 })
 
 export default router

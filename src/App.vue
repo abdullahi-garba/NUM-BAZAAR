@@ -75,10 +75,16 @@
         </router-link>
       </div>
 
-      <footer class="bg-dark text-white text-center py-4 mt-auto">
+      <footer class="bg-dark text-white text-center py-5 mt-auto border-top border-4 border-warning">
         <div class="container">
-          <p class="mb-0 fw-bold">© {{ new Date().getFullYear() }} NUM BAZAAR. All rights reserved.</p>
-          <small class="text-white-50">The Secure Campus Economy</small>
+          <div class="row justify-content-center mb-4">
+            <div class="col-md-6 d-flex justify-content-center gap-4">
+              <router-link to="/about" class="text-white text-decoration-none hover-warning fw-bold"><i class="bi bi-info-circle me-1"></i> About Us</router-link>
+              <router-link to="/support" class="text-white text-decoration-none hover-warning fw-bold"><i class="bi bi-headset me-1"></i> Help & Support</router-link>
+            </div>
+          </div>
+          <p class="mb-1 fw-black fs-5">NUM BAZAAR</p>
+          <p class="mb-0 text-white-50 small">© {{ new Date().getFullYear() }} The Secure Campus Economy. All rights reserved.</p>
         </div>
       </footer>
       
@@ -211,16 +217,97 @@ const handleSignOut = async () => {
 </script>
 
 <style>
-body { background-color: #f8f9fa; font-family: 'Inter', sans-serif; }
+/* Import Inter Font */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
+
+/* GLOBAL NATIVE APP RESET */
+:root {
+  /* This ensures the app doesn't go under the Android status bar or iPhone notch */
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+body { 
+  background-color: #f8f9fa; 
+  font-family: 'Inter', sans-serif; 
+  
+  /* Prevent the "pull-to-refresh" web browser bounce effect */
+  overscroll-behavior-y: none; 
+  
+  /* Stop text from being accidentally highlighted when swiping */
+  -webkit-user-select: none;
+  user-select: none;
+  
+  /* Disable double-tap to zoom on mobile */
+  touch-action: manipulation;
+}
+
+/* Re-enable text selection ONLY for inputs and textareas so users can type! */
+input, textarea {
+  -webkit-user-select: auto;
+  user-select: auto;
+}
+
+/* Remove the ugly blue tap flash on Android webviews */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* UTILITY CLASSES */
 .fw-black { font-weight: 900; }
 .tracking-tight { letter-spacing: -0.05em; }
 
-.floating-widgets { position: fixed; bottom: 30px; right: 30px; z-index: 1050; }
-.widget-btn { width: 60px; height: 60px; transition: transform 0.2s ease; }
-.widget-btn:hover { transform: translateY(-5px) scale(1.05); }
-@media (max-width: 768px) {
-  .floating-widgets { bottom: 20px; right: 20px; }
-  .widget-btn { width: 50px; height: 50px; }
-  .widget-btn i { font-size: 1.2rem !important; }
+/* NAVBAR FIXES FOR ANDROID */
+.navbar {
+  padding-top: calc(10px + var(--safe-area-top)) !important;
 }
+
+/* FLOATING WIDGETS (Optimized for thumbs and avoiding bottom safe areas) */
+.floating-widgets { 
+  position: fixed; 
+  bottom: calc(30px + var(--safe-area-bottom)); 
+  right: 30px; 
+  z-index: 1050; 
+}
+
+.widget-btn { 
+  width: 60px; 
+  height: 60px; 
+  transition: transform 0.2s ease, box-shadow 0.2s ease; 
+}
+
+.widget-btn:active { 
+  transform: scale(0.92); /* Native app "squish" effect when tapped */
+}
+
+@media (min-width: 992px) {
+  .widget-btn:hover { 
+    transform: translateY(-5px) scale(1.05); 
+  }
+}
+
+/* MOBILE SPECIFIC TWEAKS */
+@media (max-width: 768px) {
+  .floating-widgets { 
+    bottom: calc(20px + var(--safe-area-bottom)); 
+    right: 20px; 
+  }
+  .widget-btn { 
+    width: 55px; 
+    height: 55px; 
+  }
+  .widget-btn i { 
+    font-size: 1.3rem !important; 
+  }
+  
+  /* Make cards stretch slightly more on small screens */
+  .container {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
+
+/* FOOTER STYLING */
+.hover-warning { transition: color 0.2s; }
+.hover-warning:hover { color: #ffc107 !important; }
 </style>
