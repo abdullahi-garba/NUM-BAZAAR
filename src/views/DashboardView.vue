@@ -99,7 +99,10 @@
               <i class="bi bi-lock-fill text-danger fs-1 mb-3 d-block"></i>
               <h4 class="fw-bold">Storefront Locked</h4>
               <p class="text-muted mb-4">You need an active 30-day seller subscription to upload new merchandise.</p>
-              <button class="btn btn-primary fw-bold rounded-pill px-5" style="background-color: #082b59; border: none;">Subscribe via Paystack</button>
+              
+              <button @click="processSubscription" :disabled="isProcessingSub" class="btn btn-primary fw-bold rounded-pill px-5" style="background-color: #082b59; border: none;">
+                {{ isProcessingSub ? 'Loading Paystack...' : 'Subscribe (₦1,000 / 30 Days)' }}
+              </button>
             </div>
 
             <div v-else class="card-body p-4 p-md-5">
@@ -146,7 +149,7 @@
                   <tr v-for="product in sellerProducts" :key="product.id">
                     <td>
                       <div class="d-flex align-items-center">
-                        <img :src="product.image_urls[0]" class="rounded-3 me-3" style="width: 50px; height: 50px; object-fit: cover;">
+                        <img :src="product.image_urls?.[0] || 'https://via.placeholder.com/50'" class="rounded-3 me-3" style="width: 50px; height: 50px; object-fit: cover;">
                         <span class="fw-bold text-truncate" style="max-width: 200px; display: inline-block;">{{ product.title }}</span>
                       </div>
                     </td>
@@ -181,6 +184,7 @@ const isLoading = ref(true)
 const currentUser = ref(null)
 const userProfile = ref({})
 const hasActiveSubscription = ref(false)
+const isProcessingSub = ref(false) // Added loading state for subscription button
 
 // Financials & Bank Details
 const isWithdrawing = ref(false)
@@ -212,6 +216,7 @@ const fetchDashboardData = async () => {
         account_number: profile.account_number || '', 
         account_name: profile.account_name || '' 
       }
+      // Check if subscription is valid (exists and hasn't expired)
       hasActiveSubscription.value = profile.is_subscribed && profile.subscription_expires_at && (new Date(profile.subscription_expires_at) > new Date())
     }
 
@@ -221,6 +226,74 @@ const fetchDashboardData = async () => {
   isLoading.value = false
 }
 
+// ==================================
+// PAYSTACK SUBSCRIPTION INTEGRATION
+// ==================================
+const processSubscription = async () => {
+  isProcessingSub.value = true
+  
+  try {
+    if (!import.meta.env.VITE_PAYSTACK_PUBLIC_KEY) {
+      throw new Error("Missing VITE_PAYSTACK_PUBLIC_KEY in your Vercel settings!")
+    }
+
+    if (typeof window.PaystackPop === 'undefined') {
+      throw new Error("Paystack script is not loaded in index.html!")
+    }
+
+    const handler = window.PaystackPop.setup({
+      key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
+      email: currentUser.value.email,
+      amount: 1000 * 100, // ₦1,000 converted to kobo
+      currency: 'NGN',
+      ref: 'SUB_NUM_' + Math.floor((Math.random() * 1000000000) + 1),
+      
+      callback: function(response) {
+        const completeDatabaseUpdates = async () => {
+          try {
+            // Calculate expiry date exactly 30 days from right now
+            const expiryDate = new Date();
+            expiryDate.setDate(expiryDate.getDate() + 30);
+
+            // Update the profile in Supabase to unlock the storefront
+            const { error: dbError } = await supabase.from('profiles')
+              .update({ 
+                is_subscribed: true, 
+                subscription_expires_at: expiryDate.toISOString() 
+              })
+              .eq('id', currentUser.value.id)
+
+            if (dbError) throw new Error(dbError.message)
+
+            alert("Subscription Successful! Your storefront is now unlocked for 30 days.")
+            
+            // Instantly unlock the UI without refreshing the page
+            hasActiveSubscription.value = true
+            
+          } catch (error) {
+            console.error("Database Error Post-Subscription:", error)
+            alert("Payment successful but database update failed. Please open a support ticket with ref: " + response.reference)
+          } finally {
+            isProcessingSub.value = false
+          }
+        }
+        
+        completeDatabaseUpdates()
+      },
+      onClose: function() {
+        isProcessingSub.value = false
+      }
+    })
+
+    handler.openIframe()
+    
+  } catch (error) {
+    console.error("Initialization Error:", error)
+    alert(`Subscription Error: ${error.message}`)
+    isProcessingSub.value = false
+  }
+}
+
 const saveBankDetails = async () => {
   isSavingBank.value = true
   try {
@@ -228,11 +301,7 @@ const saveBankDetails = async () => {
     if (error) throw error
     alert('Bank Details Saved Successfully!')
     await fetchDashboardData()
-  } catch (error) {
-    alert('Error saving bank details: ' + error.message)
-  } finally {
-    isSavingBank.value = false
-  }
+  } catch (error) { alert('Error saving bank details: ' + error.message) } finally { isSavingBank.value = false }
 }
 
 const requestWithdrawal = async () => {
@@ -241,28 +310,19 @@ const requestWithdrawal = async () => {
   
   try {
     const amount = userProfile.value.wallet_balance
-    // Compile bank details into the transaction description for the admin
     const payoutDescription = `Bank Payout Request - ${userProfile.value.bank_name} | ${userProfile.value.account_number} | ${userProfile.value.account_name}`
     
     const { error: walletError } = await supabase.from('profiles').update({ wallet_balance: 0 }).eq('id', currentUser.value.id)
     if (walletError) throw walletError
     
     const { error: transError } = await supabase.from('transactions').insert([{ 
-      profile_id: currentUser.value.id, 
-      amount: amount, 
-      type: 'debit', 
-      status: 'Pending', 
-      description: payoutDescription 
+      profile_id: currentUser.value.id, amount: amount, type: 'debit', status: 'Pending', description: payoutDescription 
     }])
     if (transError) throw transError
 
     alert("Withdrawal requested successfully! Our Admin will wire the funds to your registered account shortly.")
     await fetchDashboardData()
-  } catch(error) { 
-    alert("Error requesting withdrawal: " + error.message) 
-  } finally { 
-    isWithdrawing.value = false 
-  }
+  } catch(error) { alert("Error requesting withdrawal: " + error.message) } finally { isWithdrawing.value = false }
 }
 
 const publishProduct = async () => {
@@ -281,14 +341,9 @@ const publishProduct = async () => {
     const tagsArray = newProduct.value.tagsStr.split(',').map(tag => tag.trim()).filter(tag => tag !== '');
     
     await supabase.from('products').insert([{ 
-      title: newProduct.value.name, 
-      price: Number(newProduct.value.price), 
-      stock: Number(newProduct.value.stock),
-      category: newProduct.value.category, 
-      description: newProduct.value.description, 
-      tags: tagsArray, 
-      image_urls: uploadedUrls, 
-      seller_id: currentUser.value.id 
+      title: newProduct.value.name, price: Number(newProduct.value.price), stock: Number(newProduct.value.stock),
+      category: newProduct.value.category, description: newProduct.value.description, tags: tagsArray, 
+      image_urls: uploadedUrls, seller_id: currentUser.value.id 
     }])
     
     alert("Merchandise Listed! Pending Admin Approval.")
@@ -303,9 +358,7 @@ const updateStock = async (product) => {
   try {
     await supabase.from('products').update({ stock: Number(product.stock) }).eq('id', product.id)
     alert('Stock updated successfully!')
-  } catch (error) {
-    alert('Failed to update stock.')
-  }
+  } catch (error) { alert('Failed to update stock.') }
 }
 
 onMounted(() => fetchDashboardData())
