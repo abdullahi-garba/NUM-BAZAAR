@@ -17,7 +17,7 @@
             <div class="text-center mb-4">
               <img :src="profile.profile_image || `https://ui-avatars.com/api/?name=${profile.first_name || 'User'}&background=e9ecef&color=082b59&size=120`" class="rounded-circle border border-4 border-white shadow-sm mb-3 object-fit-cover" style="width: 120px; height: 120px; background-color: white;">
               
-              <h4 class="fw-bold text-dark mb-0">{{ profile.business_name || `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Anonymous User' }}</h4>
+              <h4 class="fw-bold text-dark mb-0">{{ profile.business_name || `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'New User' }}</h4>
               <p class="text-secondary fw-medium mb-2">@{{ profile.username }}</p>
               
               <div class="d-flex flex-wrap justify-content-center gap-2 mb-2 mt-2">
@@ -145,7 +145,7 @@
 
           <div v-else>
             <div class="d-flex justify-content-between align-items-center mb-4">
-              <h4 class="fw-bold text-dark mb-0">{{ profile.role === 'seller' ? 'Active Listings' : 'Recent Activity' }}</h4>
+              <h4 class="fw-bold text-dark mb-0">{{ ['seller', 'external'].includes(profile.role) ? 'Active Listings' : 'Recent Activity' }}</h4>
             </div>
 
             <div v-if="listings.length === 0" class="bg-white p-5 text-center shadow-sm" style="border-radius: 16px; border: 1px solid rgba(0,0,0,0.05);">
@@ -174,8 +174,9 @@
       </div>
       
       <div v-else class="text-center py-5">
-        <h3 class="fw-bold text-dark">Profile Not Found</h3>
-        <p class="text-secondary">The requested user does not exist or was deleted.</p>
+        <h3 class="fw-bold text-dark mb-3">Setting up your profile...</h3>
+        <p class="text-secondary mb-4">If this screen doesn't update, please refresh the page.</p>
+        <button @click="forceRefresh" class="btn fw-bold rounded-pill px-4" style="background-color: #082b59; color: white;">Refresh Page</button>
       </div>
 
     </div>
@@ -205,40 +206,47 @@ const handleFileUpload = (event, type) => {
   if (type === 'cover') coverPictureFile.value = event.target.files[0]
 }
 
+const forceRefresh = () => window.location.reload()
+
 onMounted(async () => {
   isLoading.value = true
   const profileId = route.params.id
 
   try {
     const { data: userProfile, error: profileErr } = await supabase.from('profiles').select('*').eq('id', profileId).single()
-    if (profileErr) throw profileErr
-    profile.value = userProfile
+    
+    if (profileErr) {
+      console.warn("Profile not found or still generating:", profileErr)
+      // We don't throw the error, we let the UI gracefully show the "Setting up your profile" message
+    } else {
+      profile.value = userProfile
 
-    const { data: sessionData } = await supabase.auth.getSession()
-    if (sessionData.session && sessionData.session.user.id === profileId) {
-      isOwnProfile.value = true
-      editForm.value = {
-        first_name: profile.value.first_name || '',
-        last_name: profile.value.last_name || '',
-        middle_name: profile.value.middle_name || '',
-        business_name: profile.value.business_name || '',
-        business_sector: profile.value.business_sector || '',
-        business_desc: profile.value.business_desc || '',
-        phone_number: profile.value.phone_number || '',
-        role: profile.value.role || 'buyer',
-        campus_affiliation: profile.value.campus_affiliation || 'Student',
-        dob: profile.value.dob || '',
-        profile_image: profile.value.profile_image || '',
-        cover_image: profile.value.cover_image || ''
+      const { data: sessionData } = await supabase.auth.getSession()
+      if (sessionData.session && sessionData.session.user.id === profileId) {
+        isOwnProfile.value = true
+        editForm.value = {
+          first_name: profile.value.first_name || '',
+          last_name: profile.value.last_name || '',
+          middle_name: profile.value.middle_name || '',
+          business_name: profile.value.business_name || '',
+          business_sector: profile.value.business_sector || '',
+          business_desc: profile.value.business_desc || '',
+          phone_number: profile.value.phone_number || '',
+          role: profile.value.role || 'buyer',
+          campus_affiliation: profile.value.campus_affiliation || 'Student',
+          dob: profile.value.dob || '',
+          profile_image: profile.value.profile_image || '',
+          cover_image: profile.value.cover_image || ''
+        }
+      }
+
+      if (profile.value.role && ['seller', 'external'].includes(profile.value.role)) {
+        const { data: products } = await supabase.from('products').select('*').eq('seller_id', profileId).order('created_at', { ascending: false })
+        listings.value = products || []
       }
     }
-
-    if (profile.value.role === 'seller') {
-      const { data: products } = await supabase.from('products').select('*').eq('seller_id', profileId).order('created_at', { ascending: false })
-      listings.value = products || []
-    }
   } catch (error) {
-    console.error("Error loading profile:", error)
+    console.error("Error loading profile data:", error)
   } finally {
     isLoading.value = false
   }
@@ -247,7 +255,6 @@ onMounted(async () => {
 const saveProfile = async () => {
   isSaving.value = true
   try {
-    // Avatar Upload
     if (displayPictureFile.value) {
       const fileExt = displayPictureFile.value.name.split('.').pop()
       const fileName = `avatar_${Date.now()}.${fileExt}`
@@ -258,7 +265,6 @@ const saveProfile = async () => {
       }
     }
 
-    // Cover Image Upload
     if (coverPictureFile.value) {
       const fileExt = coverPictureFile.value.name.split('.').pop()
       const fileName = `cover_${Date.now()}.${fileExt}`
@@ -269,7 +275,6 @@ const saveProfile = async () => {
       }
     }
 
-    // Update ALL exactly matching fields from SQL
     const { error } = await supabase.from('profiles').update({
       first_name: editForm.value.first_name,
       last_name: editForm.value.last_name,
@@ -280,7 +285,7 @@ const saveProfile = async () => {
       phone_number: editForm.value.phone_number,
       role: editForm.value.role,
       campus_affiliation: editForm.value.campus_affiliation,
-      dob: editForm.value.dob || null, // Handle empty date string
+      dob: editForm.value.dob || null,
       profile_image: editForm.value.profile_image,
       cover_image: editForm.value.cover_image
     }).eq('id', profile.value.id)
