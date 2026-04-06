@@ -1,55 +1,105 @@
-/* Define Global Color Theme Variables based on image_6.png and image_8.png */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
+
 :root {
-  /* Official NUM Branding Colors */
-  --num-white: #ffffff;
-  --num-navy: #0a122a; /* Main header and navy blue elements */
-  --num-oxblood: #800000; /* Maroon, border rings, and error elements */
-  --num-gold: #fdb813; /* For highlights and active states, from image_6 */
+  /* Core Colors (Newgate University Palette) */
+  --primary: #001737;         /* Navy */
+  --primary-container: #082b59;
+  --secondary: #b22b1d;       /* Oxblood */
+  --secondary-hover: #8f2217;
+  --on-primary: #ffffff;
   
-  /* Semantic Colors from old build screenshots */
-  --bg-main: #f8f9fa; /* Very subtle off-white background */
-  --bg-card: var(--num-white);
-  --text-primary: #212529; /* Main text */
-  --text-on-navy: var(--num-white);
-  --accent-action: var(--num-oxblood); /* Buttons, highlights */
+  /* Surface Tones (Organic Structuralism) */
+  --background: #f8f9fa;      /* Level 0 */
+  --surface-container: #edeeef; /* Level 1 */
+  --surface-container-low: #f3f4f5;
+  --surface-card: #ffffff;    /* Level 2 */
+  
+  /* Indicators & Accents */
+  --tertiary-fixed: #ffdbca;  /* Badge Background */
+  --on-tertiary-fixed: #331200; /* Badge Text */
+  --success: #198754;
+  --warning-bg: #fff3cd;
+  --warning-text: #664d03;
+
+  /* Typography */
+  --font-main: 'Inter', sans-serif;
+  
+  /* Safe Areas for Mobile APK */
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-/* Base Styles for entire app */body {
-  background-color: #f8f9fa;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-/* Ensures images in cards don't get squished */
-.card-img-top {
-  object-fit: cover;
-}
-/* Global input fields & textareas (clean, rounded corners, slight shadow) */
-input, select, textarea {
-  border: 1px solid #ced4da;
-  border-radius: 6px;
-  padding: 12px;
-  margin-bottom: 10px;
-  width: 100%;
-  box-sizing: border-box; /* Ensures padding is included in width */
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05); /* Soft inner shadow */
-}
-input:focus, select:focus, textarea:focus {
-  border-color: var(--num-navy);
-  outline: none;
-  box-shadow: 0 0 0 0.2rem rgba(10, 18, 42, 0.2); /* Soft navy focus halo */
+/* Global Reset & Typography */
+body { 
+  background-color: var(--background); 
+  font-family: var(--font-main); 
+  color: var(--primary);
+  overscroll-behavior-y: none; 
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* Simple button component */
-.btn {
-  display: inline-block;
-  padding: 12px 20px;
-  background-color: var(--num-navy);
-  color: white;
-  text-decoration: none;
-  border-radius: 5px;
+input, textarea {
+  -webkit-user-select: auto;
+  user-select: auto;
+  font-weight: 500;
+}
+
+h1, h2, h3, .text-900 { font-weight: 900; letter-spacing: -0.03em; }
+.text-600 { font-weight: 600; }
+.text-500 { font-weight: 500; }
+
+/* The Academic Vanguard Components */
+.card-vanguard {
+  background-color: var(--surface-card);
+  border-radius: 1rem;
+  border: none !important; /* No-line rule */
+  box-shadow: 0 24px 32px rgba(25, 28, 29, 0.04);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-vanguard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 32px 48px rgba(25, 28, 29, 0.08);
+}
+
+.btn-pill {
+  border-radius: 9999px;
+  font-weight: 600;
+  padding: 0.85rem 2rem;
   border: none;
-  font-weight: bold;
-  cursor: pointer;
+  transition: transform 0.2s ease, background-color 0.2s ease;
 }
-.btn:hover { background-color: #001a3a; }
-.btn-primary { background-color: var(--num-oxblood); }
-.btn-primary:hover { background-color: #6a0000; }
+
+.btn-pill:active { transform: scale(0.95); }
+
+.btn-primary-vanguard {
+  background-color: var(--primary);
+  color: var(--on-primary);
+}
+
+.btn-primary-vanguard:hover { background-color: var(--primary-container); color: var(--on-primary); }
+
+.btn-oxblood {
+  background-color: var(--secondary);
+  color: var(--on-primary);
+}
+
+.btn-oxblood:hover { background-color: var(--secondary-hover); color: var(--on-primary); }
+
+/* Ghost Inputs */
+.input-vanguard {
+  background-color: var(--surface-container-low);
+  border: none;
+  border-radius: 0.75rem;
+  padding: 1rem 1.25rem;
+  color: var(--primary);
+  transition: background-color 0.2s ease;
+}
+
+.input-vanguard:focus {
+  background-color: var(--surface-container);
+  outline: none;
+  box-shadow: -4px 0 0 0 var(--primary); /* Left accent line only */
+}

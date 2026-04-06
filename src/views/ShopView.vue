@@ -1,140 +1,65 @@
 <template>
-  <div class="container shop-container pb-5 mt-4">
-    
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3 border-bottom pb-3">
-      <div><h2 class="fw-black mb-0" style="color: #082b59; font-size: 2.2rem;">Campus Feed</h2></div>
+  <div>
+    <div class="d-flex overflow-auto pb-3 mb-4 gap-2 no-scrollbar">
+      <button class="btn btn-pill btn-primary-vanguard btn-sm px-4">All Items</button>
+      <button class="btn btn-pill bg-white text-dark shadow-sm border-0 btn-sm px-4 fw-bold">Textbooks</button>
+      <button class="btn btn-pill bg-white text-dark shadow-sm border-0 btn-sm px-4 fw-bold">IT & Tech</button>
+      <button class="btn btn-pill bg-white text-dark shadow-sm border-0 btn-sm px-4 fw-bold">Dorm Decor</button>
     </div>
 
-    <div class="row g-4">
-      <div class="col-lg-3">
-        <div class="card shadow-sm border-0 rounded-4 bg-white p-4 sticky-top" style="top: 100px;">
-          <h5 class="fw-bold mb-4 border-bottom pb-2">Search & Filters</h5>
+    <div v-if="loading" class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+
+    <div v-else class="row g-4">
+      <div v-for="product in products" :key="product.id" class="col-6 col-md-4 col-lg-3">
+        <div class="card-vanguard h-100 d-flex flex-column overflow-hidden" @click="router.push(`/product/${product.id}`)" style="cursor: pointer;">
           
-          <div class="mb-4">
-            <label class="form-label fw-bold text-muted small text-uppercase">Keyword Search</label>
-            <div class="input-group border border-2 rounded-pill overflow-hidden bg-light">
-              <span class="input-group-text bg-light border-0 ps-3"><i class="bi bi-search text-muted"></i></span>
-              <input type="text" class="form-control bg-light border-0 shadow-none" placeholder="Laptops, food..." v-model="searchQuery">
+          <div class="position-relative">
+            <img :src="product.image_urls?.[0] || 'https://via.placeholder.com/400'" class="w-100 object-fit-cover" style="height: 200px;" alt="Item">
+            <div class="position-absolute top-0 end-0 p-2">
+              <AcademicBadge v-if="product.condition === 'New'" variant="warning">Mint</AcademicBadge>
             </div>
           </div>
-
-          <div class="mb-4">
-            <label class="form-label fw-bold text-muted small text-uppercase">Category</label>
-            <select class="form-select border-2 bg-light rounded-3" v-model="selectedCategory">
-              <option value="All">All Categories</option>
-              <option value="Food & Beverages">Food & Beverages</option>
-              <option value="IT & Tech">IT & Tech</option>
-              <option value="Fashion & Clothing">Fashion & Clothing</option>
-              <option value="Textbooks">Textbooks</option>
-              <option value="Services">Services</option>
-              <option value="Other">Other</option>
-            </select>
-          </div>
-
-          <div class="mb-4">
-            <label class="form-label fw-bold text-muted small text-uppercase">Price Range (₦)</label>
-            <div class="d-flex gap-2">
-              <input type="number" class="form-control bg-light border-2 rounded-3" placeholder="Min" v-model="minPrice">
-              <input type="number" class="form-control bg-light border-2 rounded-3" placeholder="Max" v-model="maxPrice">
-            </div>
-          </div>
-
-          <div class="mb-4">
-            <label class="form-label fw-bold text-muted small text-uppercase">Sort By</label>
-            <select class="form-select border-2 bg-light rounded-3" v-model="sortBy">
-              <option value="newest">Newest Arrivals</option>
-              <option value="price_asc">Price: Low to High</option>
-              <option value="price_desc">Price: High to Low</option>
-            </select>
-          </div>
-
-          <button @click="clearFilters" class="btn btn-outline-danger w-100 fw-bold rounded-pill mt-2">Clear All Filters</button>
-        </div>
-      </div>
-
-      <div class="col-lg-9">
-        <div v-if="isLoading" class="text-center py-5"><div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div></div>
-        
-        <div v-else-if="filteredProducts.length === 0" class="card border-0 shadow-sm rounded-4 p-5 text-center text-muted bg-white">
-          <i class="bi bi-search fs-1 mb-3 d-block"></i>
-          <h4>No items match your filters.</h4>
-          <p>Try broadening your search or clearing your filters.</p>
-        </div>
-
-        <div v-else class="row g-4">
-          <div v-for="product in filteredProducts" :key="product.id" class="col-md-6 col-xl-4">
-            <div class="card h-100 shadow-sm border-0 rounded-4 overflow-hidden product-card bg-white position-relative">
-              
-              <div :id="'carousel-' + product.id" class="carousel slide position-relative" data-bs-ride="false">
-                <div class="carousel-inner">
-                  <div v-for="(img, idx) in product.image_urls" :key="idx" :class="['carousel-item', { active: idx === 0 }]">
-                    <img :src="img" class="d-block w-100 product-img">
-                  </div>
-                </div>
-                <button v-if="product.image_urls.length > 1" class="carousel-control-prev" type="button" :data-bs-target="'#carousel-' + product.id" data-bs-slide="prev" @click.stop><span class="carousel-control-prev-icon"></span></button>
-                <button v-if="product.image_urls.length > 1" class="carousel-control-next" type="button" :data-bs-target="'#carousel-' + product.id" data-bs-slide="next" @click.stop><span class="carousel-control-next-icon"></span></button>
+          
+          <div class="p-3 d-flex flex-column flex-grow-1">
+            <h2 class="text-900 mb-1" style="color: var(--secondary); font-size: 1.25rem;">₦{{ Number(product.price).toLocaleString() }}</h2>
+            <h3 class="text-600 mb-3 text-truncate" style="font-size: 0.95rem;">{{ product.title }}</h3>
+            
+            <div class="mt-auto d-flex align-items-center">
+              <div class="rounded-circle bg-light d-flex justify-content-center align-items-center me-2" style="width: 24px; height: 24px;">
+                <span class="text-900" style="font-size: 0.6rem; color: var(--primary);">{{ product.profiles?.business_name?.charAt(0) || 'U' }}</span>
               </div>
-              
-              <div class="card-body d-flex flex-column p-4">
-                <span class="badge bg-light text-secondary border mb-2 align-self-start">{{ product.category }}</span>
-                <div class="d-flex justify-content-between align-items-start mb-1">
-                  <h5 class="card-title fw-bold mb-0 text-truncate pe-2 text-dark">{{ product.title }}</h5>
-                </div>
-                <h4 class="text-danger fw-black mb-3" style="color: #800000 !important;">₦{{ product.price.toLocaleString() }}</h4>
-                <p class="card-text text-muted small flex-grow-1" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">{{ product.description }}</p>
-                
-                <router-link :to="`/product/${product.id}`" class="btn btn-outline-dark w-100 fw-bold mt-3 rounded-pill position-relative" style="z-index: 2;">View Details</router-link>
-              </div>
-
-              <router-link :to="`/product/${product.id}`" class="position-absolute top-0 start-0 w-100 h-100" style="z-index: 1;"></router-link>
+              <span class="text-500 text-muted" style="font-size: 0.75rem;">{{ product.profiles?.business_name || 'Verified Student' }}</span>
             </div>
           </div>
+
         </div>
       </div>
     </div>
+
+    <button @click="router.push('/dashboard')" class="btn btn-oxblood rounded-circle shadow-lg position-fixed d-flex justify-content-center align-items-center" style="width: 65px; height: 65px; bottom: calc(90px + var(--safe-area-bottom)); right: 20px; z-index: 1050;">
+      <i class="bi bi-plus-lg fs-3"></i>
+    </button>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { supabase } from '../lib/supabaseClient'
+import { useRouter } from 'vue-router'
+import AcademicBadge from '../components/AcademicBadge.vue'
 
-const products = ref([]); const isLoading = ref(true);
+const router = useRouter()
+const products = ref([])
+const loading = ref(true)
 
-const searchQuery = ref(''); const selectedCategory = ref('All'); 
-const minPrice = ref(null); const maxPrice = ref(null); const sortBy = ref('newest')
-
-const fetchProducts = async () => {
-  isLoading.value = true
-  const { data } = await supabase.from('products').select('*').eq('is_approved', true).order('created_at', { ascending: false })
-  if (data) products.value = data
-  isLoading.value = false
-}
-
-const filteredProducts = computed(() => {
-  let result = products.value;
-  if (selectedCategory.value !== 'All') result = result.filter(p => p.category === selectedCategory.value);
-  if (searchQuery.value) {
-    const q = searchQuery.value.toLowerCase();
-    result = result.filter(p => p.title.toLowerCase().includes(q) || (p.tags && p.tags.some(tag => tag.toLowerCase().includes(q))));
-  }
-  if (minPrice.value !== null && minPrice.value !== '') result = result.filter(p => p.price >= Number(minPrice.value));
-  if (maxPrice.value !== null && maxPrice.value !== '') result = result.filter(p => p.price <= Number(maxPrice.value));
-  if (sortBy.value === 'newest') result = result.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  else if (sortBy.value === 'price_asc') result = result.sort((a, b) => a.price - b.price);
-  else if (sortBy.value === 'price_desc') result = result.sort((a, b) => b.price - a.price);
-  return result;
+onMounted(async () => {
+  const { data } = await supabase.from('products').select(`*, profiles(business_name)`).eq('status', 'active').order('created_at', { ascending: false })
+  products.value = data || []
+  loading.value = false
 })
-
-const clearFilters = () => {
-  searchQuery.value = ''; selectedCategory.value = 'All'; minPrice.value = null; maxPrice.value = null; sortBy.value = 'newest';
-}
-
-onMounted(() => fetchProducts())
 </script>
 
 <style scoped>
-.product-card { transition: all 0.3s ease; border: 1px solid rgba(0,0,0,0.05) !important; }
-.product-card:hover { transform: translateY(-8px); box-shadow: 0 1rem 3rem rgba(0,0,0,0.1) !important; }
-.product-img { height: 240px; object-fit: cover; background-color: #f8f9fa; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 </style>
