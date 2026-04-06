@@ -1,80 +1,183 @@
 <template>
-  <div class="container py-5 mt-4">
-    <div v-if="isLoading" class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+  <div class="bg-light min-vh-100 pb-5">
     
-    <div v-else-if="profile" class="row g-4 justify-content-center">
+    <div style="height: 200px; background-color: #082b59; position: relative; background-size: cover; background-position: center;" :style="profile?.cover_image ? `background-image: url('${profile.cover_image}');` : ''">
+      <div class="position-absolute w-100 h-100" style="background: linear-gradient(to bottom, rgba(8,43,89,0.5), rgba(8,43,89,1));"></div>
+    </div>
+
+    <div class="container px-lg-5" style="margin-top: -80px; position: relative; z-index: 10;">
       
-      <div class="col-lg-4">
-        <div class="card shadow-sm border-0 rounded-4 bg-white p-4 text-center sticky-top" style="top: 100px;">
-          <div class="position-relative d-inline-block mx-auto mb-3">
-            <img :src="profile.profile_image || 'https://via.placeholder.com/150'" class="rounded-circle object-fit-cover shadow-sm border border-3 border-white" style="width: 120px; height: 120px;">
-            <span v-if="profile.is_verified" class="position-absolute bottom-0 end-0 p-2 bg-success border border-light rounded-circle text-white shadow-sm" title="KYC Verified" style="transform: translate(-10%, -10%);">
-              <i class="bi bi-patch-check-fill"></i>
-            </span>
-          </div>
-          
-          <h4 class="fw-black mb-1 text-dark">{{ profile.business_name || profile.first_name || 'Campus Member' }}</h4>
-          <p class="text-muted mb-2">@{{ profile.username }}</p>
-          
-          <span class="badge mb-3" :class="profile.role === 'seller' ? 'bg-primary' : 'bg-secondary'">{{ profile.role.toUpperCase() }}</span>
-          
-          <div v-if="isOwner && !profile.is_verified" class="mt-4 pt-3 border-top text-start">
-            <h6 class="fw-bold text-dark mb-2"><i class="bi bi-shield-lock me-2"></i>Identity Verification</h6>
-            <div v-if="profile.id_card_url" class="alert alert-warning small py-2 mb-0 fw-bold border-0 bg-warning-subtle text-warning-emphasis">
-              <i class="bi bi-hourglass-split me-1"></i> ID submitted. Pending Admin review.
+      <div v-if="isLoading" class="text-center py-5"><div class="spinner-border" style="color: #b22b1d;"></div></div>
+      
+      <div v-else-if="profile" class="row g-4">
+        
+        <div class="col-lg-4">
+          <div class="bg-white p-4 shadow-sm" style="border-radius: 16px; border: 1px solid rgba(0,0,0,0.05);">
+            
+            <div class="text-center mb-4">
+              <img :src="profile.profile_image || `https://ui-avatars.com/api/?name=${profile.first_name || 'User'}&background=e9ecef&color=082b59&size=120`" class="rounded-circle border border-4 border-white shadow-sm mb-3 object-fit-cover" style="width: 120px; height: 120px; background-color: white;">
+              
+              <h4 class="fw-bold text-dark mb-0">{{ profile.business_name || `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Anonymous User' }}</h4>
+              <p class="text-secondary fw-medium mb-2">@{{ profile.username }}</p>
+              
+              <div class="d-flex flex-wrap justify-content-center gap-2 mb-2 mt-2">
+                <span class="badge rounded-pill px-3 py-2 text-uppercase fw-bold" :style="profile.role === 'seller' ? 'background-color: #082b59; color: white;' : 'background-color: #e9ecef; color: #6b7280;'">
+                  {{ profile.role === 'seller' ? 'Vendor' : profile.role === 'admin' ? 'Admin' : 'Buyer' }}
+                </span>
+                <span class="badge rounded-pill px-3 py-2 text-uppercase fw-bold" style="background-color: #f3f4f6; color: #111827; border: 1px solid #e5e7eb;">
+                  {{ profile.campus_affiliation || 'Student' }}
+                </span>
+                <span v-if="profile.business_sector" class="badge rounded-pill px-3 py-2 text-uppercase fw-bold" style="background-color: #ffe8d6; color: #b22b1d; border: 1px solid #b22b1d;">
+                  {{ profile.business_sector }}
+                </span>
+              </div>
             </div>
-            <div v-else>
-              <p class="text-muted small mb-2">Please upload your Newgate University ID card to become a verified member.</p>
-              <input type="file" class="form-control form-control-sm mb-2 bg-light border-0" accept="image/*" @change="e => kycFile = e.target.files[0]">
-              <button @click="uploadKYC" class="btn btn-dark btn-sm w-100 fw-bold rounded-pill" :disabled="isUploadingKYC || !kycFile">
-                {{ isUploadingKYC ? 'Uploading...' : 'Submit ID Card' }}
-              </button>
-            </div>
-          </div>
 
-          <p v-if="profile.bio" class="text-muted small mt-4 pt-3 border-top text-start px-2">"{{ profile.bio }}"</p>
-          
-          <button v-if="isOwner" class="btn btn-outline-dark fw-bold rounded-pill w-100 mt-3">Edit Profile</button>
+            <div class="mb-4">
+              <h6 class="fw-bold text-dark text-uppercase small" style="letter-spacing: 0.05em;">Business Description / Bio</h6>
+              <p class="text-secondary small fw-medium" style="line-height: 1.6;">
+                {{ profile.business_desc || 'No description provided yet.' }}
+              </p>
+            </div>
+
+            <div class="d-flex flex-column gap-3 mb-4 border-top pt-4">
+              <div class="d-flex align-items-center text-secondary small fw-medium">
+                <i class="bi bi-envelope-fill me-3 fs-5" style="color: #082b59;"></i> {{ profile.email || 'Hidden' }}
+              </div>
+              <div class="d-flex align-items-center text-secondary small fw-medium">
+                <i class="bi bi-telephone-fill me-3 fs-5" style="color: #082b59;"></i> {{ profile.phone_number || 'Not provided' }}
+              </div>
+              <div class="d-flex align-items-center text-secondary small fw-medium" v-if="profile.dob">
+                <i class="bi bi-gift-fill me-3 fs-5" style="color: #082b59;"></i> {{ new Date(profile.dob).toLocaleDateString() }}
+              </div>
+              <div class="d-flex align-items-center text-secondary small fw-medium">
+                <i class="bi bi-calendar-check-fill me-3 fs-5" style="color: #082b59;"></i> Joined {{ new Date(profile.created_at || Date.now()).toLocaleDateString() }}
+              </div>
+            </div>
+
+            <button v-if="isOwnProfile && !isEditing" @click="isEditing = true" class="btn w-100 rounded-pill fw-bold py-2" style="background-color: #f3f4f6; color: #111827; border: 1px solid #e5e7eb; transition: all 0.2s;">
+              <i class="bi bi-pencil-square me-2"></i> Edit Profile
+            </button>
+          </div>
         </div>
-      </div>
 
-      <div class="col-lg-8" v-if="isOwner">
-        <div class="card shadow-sm border-0 rounded-4 bg-white p-4">
-          <h4 class="fw-black mb-4 border-bottom pb-3"><i class="bi bi-bag-check-fill me-2"></i>My Purchases</h4>
+        <div class="col-lg-8">
           
-          <div v-if="myOrders.length === 0" class="text-center text-muted py-5">
-            <i class="bi bi-receipt fs-1 mb-3 d-block"></i>
-            You haven't made any escrow purchases yet.
+          <div v-if="isEditing" class="bg-white p-4 shadow-sm" style="border-radius: 16px; border: 1px solid rgba(0,0,0,0.05);">
+            <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+              <h5 class="fw-bold text-dark mb-0">Update Profile Details</h5>
+              <button @click="isEditing = false" class="btn-close"></button>
+            </div>
+
+            <form @submit.prevent="saveProfile">
+              <div class="row g-3 mb-4">
+                
+                <div class="col-md-6 mb-2">
+                  <label class="form-label small fw-bold text-uppercase text-dark" style="letter-spacing: 0.05em;">Display Picture</label>
+                  <input type="file" class="form-control" accept="image/*" @change="e => handleFileUpload(e, 'avatar')" style="background-color: #e9ecef; border: none; border-radius: 12px; padding: 10px 15px; font-weight: 500; color: #111827;">
+                </div>
+                <div class="col-md-6 mb-2">
+                  <label class="form-label small fw-bold text-uppercase text-dark" style="letter-spacing: 0.05em;">Cover Banner Image</label>
+                  <input type="file" class="form-control" accept="image/*" @change="e => handleFileUpload(e, 'cover')" style="background-color: #e9ecef; border: none; border-radius: 12px; padding: 10px 15px; font-weight: 500; color: #111827;">
+                </div>
+
+                <div class="col-md-4">
+                  <label class="form-label small fw-bold text-uppercase text-dark" style="letter-spacing: 0.05em;">First Name</label>
+                  <input type="text" v-model="editForm.first_name" class="form-control" style="background-color: #e9ecef; border: none; border-radius: 12px; padding: 12px 15px; font-weight: 500; color: #111827;">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label small fw-bold text-uppercase text-dark" style="letter-spacing: 0.05em;">Middle Name</label>
+                  <input type="text" v-model="editForm.middle_name" class="form-control" style="background-color: #e9ecef; border: none; border-radius: 12px; padding: 12px 15px; font-weight: 500; color: #111827;">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label small fw-bold text-uppercase text-dark" style="letter-spacing: 0.05em;">Last Name</label>
+                  <input type="text" v-model="editForm.last_name" class="form-control" style="background-color: #e9ecef; border: none; border-radius: 12px; padding: 12px 15px; font-weight: 500; color: #111827;">
+                </div>
+                
+                <div class="col-md-6">
+                  <label class="form-label small fw-bold text-uppercase text-dark" style="letter-spacing: 0.05em;">Account Type</label>
+                  <select v-model="editForm.role" class="form-select" style="background-color: #e9ecef; border: none; border-radius: 12px; padding: 12px 15px; font-weight: 500; color: #111827;">
+                    <option value="buyer">Buyer</option>
+                    <option value="seller">Vendor (Seller)</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small fw-bold text-uppercase text-dark" style="letter-spacing: 0.05em;">Campus Affiliation</label>
+                  <select v-model="editForm.campus_affiliation" class="form-select" style="background-color: #e9ecef; border: none; border-radius: 12px; padding: 12px 15px; font-weight: 500; color: #111827;">
+                    <option value="Student">Student</option>
+                    <option value="Staff">Staff</option>
+                    <option value="External">External</option>
+                  </select>
+                </div>
+
+                <div class="col-md-4">
+                  <label class="form-label small fw-bold text-uppercase text-dark" style="letter-spacing: 0.05em;">Business Name</label>
+                  <input type="text" v-model="editForm.business_name" class="form-control" placeholder="Optional" style="background-color: #e9ecef; border: none; border-radius: 12px; padding: 12px 15px; font-weight: 500; color: #111827;">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label small fw-bold text-uppercase text-dark" style="letter-spacing: 0.05em;">Business Sector</label>
+                  <input type="text" v-model="editForm.business_sector" class="form-control" placeholder="e.g. Tech, Food" style="background-color: #e9ecef; border: none; border-radius: 12px; padding: 12px 15px; font-weight: 500; color: #111827;">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label small fw-bold text-uppercase text-dark" style="letter-spacing: 0.05em;">Phone Number</label>
+                  <input type="tel" v-model="editForm.phone_number" class="form-control" placeholder="080..." style="background-color: #e9ecef; border: none; border-radius: 12px; padding: 12px 15px; font-weight: 500; color: #111827;">
+                </div>
+
+                <div class="col-12">
+                  <label class="form-label small fw-bold text-uppercase text-dark" style="letter-spacing: 0.05em;">Date of Birth</label>
+                  <input type="date" v-model="editForm.dob" class="form-control" style="background-color: #e9ecef; border: none; border-radius: 12px; padding: 12px 15px; font-weight: 500; color: #111827;">
+                </div>
+
+                <div class="col-12">
+                  <label class="form-label small fw-bold text-uppercase text-dark" style="letter-spacing: 0.05em;">Business Description / Bio</label>
+                  <textarea v-model="editForm.business_desc" class="form-control" rows="4" style="background-color: #e9ecef; border: none; border-radius: 12px; padding: 12px 15px; font-weight: 500; color: #111827;"></textarea>
+                </div>
+              </div>
+
+              <div class="d-flex justify-content-end gap-3 pt-3 border-top">
+                <button type="button" @click="isEditing = false" class="btn fw-bold rounded-pill px-4" style="background-color: white; color: #6b7280; border: 1px solid #e9ecef;">Cancel</button>
+                <button type="submit" class="btn fw-bold rounded-pill px-5" style="background-color: #b22b1d; color: white; border: none;" :disabled="isSaving">
+                  <span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span> Save Changes
+                </button>
+              </div>
+            </form>
           </div>
 
-          <div v-else class="list-group list-group-flush">
-            <div v-for="order in myOrders" :key="order.id" class="list-group-item p-4 border rounded-4 mb-3 bg-light">
-              <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-                
-                <div class="d-flex align-items-center">
-                  <img :src="order.product_image" class="rounded-3 me-3 object-fit-cover shadow-sm" style="width: 70px; height: 70px;">
-                  <div>
-                    <h6 class="fw-bold mb-1 text-dark">{{ order.product_name }}</h6>
-                    <div class="text-danger fw-black mb-1">₦{{ Number(order.product_price).toLocaleString() }}</div>
-                    <small class="text-muted d-block">Order ID: {{ order.id.substring(0,8) }}</small>
+          <div v-else>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+              <h4 class="fw-bold text-dark mb-0">{{ profile.role === 'seller' ? 'Active Listings' : 'Recent Activity' }}</h4>
+            </div>
+
+            <div v-if="listings.length === 0" class="bg-white p-5 text-center shadow-sm" style="border-radius: 16px; border: 1px solid rgba(0,0,0,0.05);">
+              <i class="bi bi-inbox fs-1 text-secondary mb-3 d-block"></i>
+              <h5 class="fw-bold text-dark">No items found</h5>
+              <p class="text-secondary fw-medium">This user hasn't listed any items for sale yet.</p>
+            </div>
+            
+            <div v-else class="row g-4">
+              <div v-for="product in listings" :key="product.id" class="col-md-6 col-xl-4">
+                <div class="h-100 d-flex flex-column overflow-hidden bg-white" @click="$router.push(`/product/${product.id}`)" style="cursor: pointer; border-radius: 16px; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 4px 15px rgba(0,0,0,0.02); transition: transform 0.2s ease;">
+                  <div class="position-relative bg-light">
+                    <img :src="product.image_urls?.[0] || 'https://via.placeholder.com/400'" class="w-100 object-fit-cover" style="height: 180px;" alt="Item">
+                    <span v-if="product.stock <= 0" class="badge bg-dark position-absolute top-0 end-0 m-2">SOLD OUT</span>
+                  </div>
+                  <div class="p-3 d-flex flex-column flex-grow-1">
+                    <h6 class="fw-bold text-dark text-truncate mb-1">{{ product.title }}</h6>
+                    <h5 class="fw-bold mt-auto mb-0" style="color: #b22b1d;">₦{{ Number(product.price).toLocaleString() }}</h5>
                   </div>
                 </div>
-
-                <div class="text-end">
-                  <span v-if="order.status === 'Paid (In Escrow)'" class="badge bg-warning text-dark border border-warning mb-2 px-3 py-2 rounded-pill shadow-sm"><i class="bi bi-lock-fill me-1"></i> Paid (Funds in Escrow)</span>
-                  <span v-else class="badge bg-success-subtle text-success border border-success mb-2 px-3 py-2 rounded-pill"><i class="bi bi-check-circle-fill me-1"></i> Completed</span>
-                  
-                  <button v-if="order.status === 'Paid (In Escrow)'" @click="confirmDelivery(order)" class="btn btn-success btn-sm w-100 fw-bold rounded-pill shadow-sm" :disabled="isConfirming === order.id">
-                    {{ isConfirming === order.id ? 'Releasing...' : 'Confirm & Release Funds' }}
-                  </button>
-                </div>
-
               </div>
             </div>
           </div>
 
         </div>
       </div>
+      
+      <div v-else class="text-center py-5">
+        <h3 class="fw-bold text-dark">Profile Not Found</h3>
+        <p class="text-secondary">The requested user does not exist or was deleted.</p>
+      </div>
+
     </div>
   </div>
 </template>
@@ -85,85 +188,119 @@ import { useRoute } from 'vue-router'
 import { supabase } from '../lib/supabaseClient'
 
 const route = useRoute()
-const profileId = route.params.id
-
 const isLoading = ref(true)
+const isSaving = ref(false)
+
 const profile = ref(null)
-const isOwner = ref(false)
-const myOrders = ref([])
-const isConfirming = ref(null)
+const listings = ref([])
+const isOwnProfile = ref(false)
+const isEditing = ref(false)
 
-// KYC Data
-const kycFile = ref(null)
-const isUploadingKYC = ref(false)
+const editForm = ref({})
+const displayPictureFile = ref(null)
+const coverPictureFile = ref(null)
 
-const fetchProfileData = async () => {
+const handleFileUpload = (event, type) => {
+  if (type === 'avatar') displayPictureFile.value = event.target.files[0]
+  if (type === 'cover') coverPictureFile.value = event.target.files[0]
+}
+
+onMounted(async () => {
   isLoading.value = true
-  const { data: sessionData } = await supabase.auth.getSession()
-  const currentUser = sessionData.session?.user
+  const profileId = route.params.id
 
-  if (currentUser && currentUser.id === profileId) isOwner.value = true
-
-  const { data: profileData } = await supabase.from('profiles').select('*').eq('id', profileId).single()
-  profile.value = profileData
-
-  if (isOwner.value) {
-    const { data: ordersData } = await supabase.from('orders').select('*').eq('buyer_id', profileId).order('created_at', { ascending: false })
-    myOrders.value = ordersData || []
-  }
-
-  isLoading.value = false
-}
-
-const uploadKYC = async () => {
-  if (!kycFile.value) return;
-  isUploadingKYC.value = true;
-  
   try {
-    const fileExt = kycFile.value.name.split('.').pop()
-    const fileName = `${profile.value.id}_kyc_${Date.now()}.${fileExt}`
-    
-    const { error: uploadError } = await supabase.storage.from('kyc-documents').upload(fileName, kycFile.value)
-    if (uploadError) throw uploadError
+    const { data: userProfile, error: profileErr } = await supabase.from('profiles').select('*').eq('id', profileId).single()
+    if (profileErr) throw profileErr
+    profile.value = userProfile
 
-    const { data: publicUrlData } = supabase.storage.from('kyc-documents').getPublicUrl(fileName)
-    
-    const { error: updateError } = await supabase.from('profiles').update({ id_card_url: publicUrlData.publicUrl }).eq('id', profile.value.id)
-    if (updateError) throw updateError
+    const { data: sessionData } = await supabase.auth.getSession()
+    if (sessionData.session && sessionData.session.user.id === profileId) {
+      isOwnProfile.value = true
+      editForm.value = {
+        first_name: profile.value.first_name || '',
+        last_name: profile.value.last_name || '',
+        middle_name: profile.value.middle_name || '',
+        business_name: profile.value.business_name || '',
+        business_sector: profile.value.business_sector || '',
+        business_desc: profile.value.business_desc || '',
+        phone_number: profile.value.phone_number || '',
+        role: profile.value.role || 'buyer',
+        campus_affiliation: profile.value.campus_affiliation || 'Student',
+        dob: profile.value.dob || '',
+        profile_image: profile.value.profile_image || '',
+        cover_image: profile.value.cover_image || ''
+      }
+    }
 
-    alert("ID Card submitted successfully! Admin will review it shortly.")
-    kycFile.value = null
-    await fetchProfileData()
-
+    if (profile.value.role === 'seller') {
+      const { data: products } = await supabase.from('products').select('*').eq('seller_id', profileId).order('created_at', { ascending: false })
+      listings.value = products || []
+    }
   } catch (error) {
-    alert("Error uploading KYC document: " + error.message)
+    console.error("Error loading profile:", error)
   } finally {
-    isUploadingKYC.value = false;
+    isLoading.value = false
   }
-}
+})
 
-const confirmDelivery = async (order) => {
-  if(!confirm("Are you sure you have received the item in good condition? This will release the funds to the seller instantly.")) return;
-  
-  isConfirming.value = order.id
+const saveProfile = async () => {
+  isSaving.value = true
   try {
-    const { data: sellerProfile } = await supabase.from('profiles').select('wallet_balance, escrow_balance').eq('id', order.seller_id).single()
+    // Avatar Upload
+    if (displayPictureFile.value) {
+      const fileExt = displayPictureFile.value.name.split('.').pop()
+      const fileName = `avatar_${Date.now()}.${fileExt}`
+      const { error: uploadError } = await supabase.storage.from('user-profiles').upload(fileName, displayPictureFile.value)
+      if (!uploadError) {
+        const { data: publicUrlData } = supabase.storage.from('user-profiles').getPublicUrl(fileName)
+        editForm.value.profile_image = publicUrlData.publicUrl
+      }
+    }
+
+    // Cover Image Upload
+    if (coverPictureFile.value) {
+      const fileExt = coverPictureFile.value.name.split('.').pop()
+      const fileName = `cover_${Date.now()}.${fileExt}`
+      const { error: uploadError } = await supabase.storage.from('user-profiles').upload(fileName, coverPictureFile.value)
+      if (!uploadError) {
+        const { data: publicUrlData } = supabase.storage.from('user-profiles').getPublicUrl(fileName)
+        editForm.value.cover_image = publicUrlData.publicUrl
+      }
+    }
+
+    // Update ALL exactly matching fields from SQL
+    const { error } = await supabase.from('profiles').update({
+      first_name: editForm.value.first_name,
+      last_name: editForm.value.last_name,
+      middle_name: editForm.value.middle_name,
+      business_name: editForm.value.business_name,
+      business_sector: editForm.value.business_sector,
+      business_desc: editForm.value.business_desc,
+      phone_number: editForm.value.phone_number,
+      role: editForm.value.role,
+      campus_affiliation: editForm.value.campus_affiliation,
+      dob: editForm.value.dob || null, // Handle empty date string
+      profile_image: editForm.value.profile_image,
+      cover_image: editForm.value.cover_image
+    }).eq('id', profile.value.id)
+
+    if (error) throw error
+
+    profile.value = { ...profile.value, ...editForm.value }
+    isEditing.value = false
+    displayPictureFile.value = null
+    coverPictureFile.value = null
     
-    const newWallet = Number(sellerProfile.wallet_balance || 0) + Number(order.product_price)
-    const newEscrow = Number(sellerProfile.escrow_balance || 0) - Number(order.product_price)
-
-    await supabase.from('profiles').update({ wallet_balance: newWallet, escrow_balance: newEscrow }).eq('id', order.seller_id)
-    await supabase.from('orders').update({ status: 'Completed' }).eq('id', order.id)
-    await supabase.from('transactions').insert([{ profile_id: order.seller_id, amount: order.product_price, type: 'credit', status: 'Completed', description: `Escrow Release for Order #${order.id.substring(0,8)}` }])
-
-    alert("Funds released to seller successfully!")
-    await fetchProfileData()
   } catch (error) {
-    alert("Error releasing funds. Please contact support.")
+    alert("Error updating profile: " + error.message)
   } finally {
-    isConfirming.value = null
+    isSaving.value = false
   }
 }
-
-onMounted(() => fetchProfileData())
 </script>
+
+<style scoped>
+input, textarea, select { font-size: 16px !important; }
+.h-100:hover { transform: translateY(-3px) !important; box-shadow: 0 8px 25px rgba(0,0,0,0.05) !important; }
+</style>

@@ -11,14 +11,14 @@
         <span class="text-secondary small fw-medium">Newgate University Digital Marketplace</span>
       </div>
 
-      <div class="p-4 p-md-5 w-100 bg-white" style="max-width: 460px; border-radius: 16px; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 4px 20px rgba(0,0,0,0.03);">
+      <div class="p-4 p-md-5 w-100 bg-white" style="max-width: 480px; border-radius: 16px; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 4px 20px rgba(0,0,0,0.03);">
         
         <div class="text-center mb-4">
           <div class="rounded-circle d-inline-flex justify-content-center align-items-center mb-3" style="width: 50px; height: 50px; background-color: #e0e7ff; color: #3730a3;">
             <i class="bi bi-lock-fill fs-4"></i>
           </div>
           <h2 class="mb-1 fw-bold text-dark">NUM BAZAAR</h2>
-          <p class="text-secondary small fw-medium">Secure access for Newgate University members.</p>
+          <p class="text-secondary small fw-medium">Secure access for the Newgate ecosystem.</p>
         </div>
 
         <div class="d-flex rounded-pill p-1 mb-4" style="background-color: #f3f4f6;">
@@ -27,10 +27,48 @@
         </div>
 
         <form @submit.prevent="handleAuth">
-          <div class="mb-3">
-            <label class="form-label small fw-bold text-uppercase text-dark" style="letter-spacing: 0.05em;">University Email</label>
+          
+          <div v-if="!isLogin" class="row g-3 mb-3">
+            <div class="col-6">
+              <label class="form-label small fw-bold text-uppercase text-dark" style="letter-spacing: 0.05em;">First Name</label>
+              <input type="text" v-model="firstName" class="form-control" placeholder="Abdullahi" style="background-color: #e9ecef; border: none; border-radius: 12px; padding: 14px 20px; font-weight: 500; color: #111827;" :required="!isLogin">
+            </div>
+            <div class="col-6">
+              <label class="form-label small fw-bold text-uppercase text-dark" style="letter-spacing: 0.05em;">Last Name</label>
+              <input type="text" v-model="lastName" class="form-control" placeholder="Garba" style="background-color: #e9ecef; border: none; border-radius: 12px; padding: 14px 20px; font-weight: 500; color: #111827;" :required="!isLogin">
+            </div>
+          </div>
+
+          <div v-if="!isLogin" class="mb-3">
+            <label class="form-label small fw-bold text-uppercase text-dark" style="letter-spacing: 0.05em;">Username</label>
             <div class="position-relative">
-              <input type="email" v-model="email" class="form-control w-100" placeholder="student.name@newgate.edu" style="background-color: #e9ecef; border: none; border-radius: 12px; padding: 14px 20px; font-weight: 500; color: #111827;" required>
+              <input type="text" v-model="username" class="form-control w-100" placeholder="garba_the_analyst" style="background-color: #e9ecef; border: none; border-radius: 12px; padding: 14px 20px; font-weight: 500; color: #111827;" :required="!isLogin">
+              <i class="bi bi-person position-absolute top-50 end-0 translate-middle-y me-3 text-secondary fs-5"></i>
+            </div>
+          </div>
+
+          <div v-if="!isLogin" class="row g-3 mb-3">
+            <div class="col-6">
+              <label class="form-label small fw-bold text-uppercase text-dark" style="letter-spacing: 0.05em;">Account Type</label>
+              <select v-model="accountType" class="form-select w-100" style="background-color: #e9ecef; border: none; border-radius: 12px; padding: 14px 20px; font-weight: 500; color: #111827;" :required="!isLogin">
+                <option value="buyer">Buyer</option>
+                <option value="seller">Vendor (Seller)</option>
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label small fw-bold text-uppercase text-dark" style="letter-spacing: 0.05em;">Affiliation</label>
+              <select v-model="affiliation" class="form-select w-100" style="background-color: #e9ecef; border: none; border-radius: 12px; padding: 14px 20px; font-weight: 500; color: #111827;" :required="!isLogin">
+                <option value="Student">Student</option>
+                <option value="Staff">Staff</option>
+                <option value="External">External</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-bold text-uppercase text-dark" style="letter-spacing: 0.05em;">Email Address</label>
+            <div class="position-relative">
+              <input type="email" v-model="email" class="form-control w-100" placeholder="abdullahi.garba@newgate.edu" style="background-color: #e9ecef; border: none; border-radius: 12px; padding: 14px 20px; font-weight: 500; color: #111827;" required>
               <i class="bi bi-at position-absolute top-50 end-0 translate-middle-y me-3 text-secondary fs-5"></i>
             </div>
           </div>
@@ -51,14 +89,7 @@
             {{ isLogin ? 'Join the Bazaar' : 'Register Account' }} <i class="bi bi-arrow-right"></i>
           </button>
         </form>
-
-        <div class="text-center d-flex justify-content-center gap-3">
-          <span class="small text-secondary fw-bold" style="font-size: 0.7rem;"><i class="bi bi-shield-check text-primary me-1"></i> ENCRYPTED</span>
-          <span class="small text-secondary fw-bold" style="font-size: 0.7rem;"><i class="bi bi-bank text-primary me-1"></i> VERIFIED MEMBER</span>
-        </div>
       </div>
-      
-      <p class="text-secondary small mt-4 text-center fw-medium">By signing in, you agree to the <strong class="text-dark">Marketplace Conduct Code</strong> and <strong class="text-dark">Privacy Charter</strong>.</p>
     </div>
   </div>
 </template>
@@ -70,8 +101,15 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 const isLogin = ref(true)
+
 const email = ref('')
 const password = ref('')
+const firstName = ref('')
+const lastName = ref('')
+const username = ref('')
+const accountType = ref('buyer') 
+const affiliation = ref('Student')
+
 const loading = ref(false)
 const isResetting = ref(false)
 
@@ -79,17 +117,25 @@ const handleAuth = async () => {
   loading.value = true
   try {
     if (isLogin.value) {
-      // Standard Login
       const { error } = await supabase.auth.signInWithPassword({ email: email.value, password: password.value })
       if (error) throw error
       router.push('/shop')
     } else {
-      // Registration (Now instantly logs them in since confirmation is disabled)
-      const { error } = await supabase.auth.signUp({ email: email.value, password: password.value })
+      const { error } = await supabase.auth.signUp({ 
+        email: email.value, 
+        password: password.value,
+        options: {
+          data: {
+            first_name: firstName.value,
+            last_name: lastName.value,
+            username: username.value,
+            role: accountType.value,
+            campus_affiliation: affiliation.value, // FIXED DATABASE MAPPING
+            business_name: accountType.value === 'seller' ? `${firstName.value}'s Store` : null
+          }
+        }
+      })
       if (error) throw error
-      
-      // Removed the "Check your email" alert. 
-      // User is instantly routed to the feed.
       router.push('/shop')
     }
   } catch (error) {
@@ -100,25 +146,12 @@ const handleAuth = async () => {
 }
 
 const handlePasswordReset = async () => {
-  if (!email.value) {
-    alert("Please enter your University Email address first.")
-    return
-  }
-  
-  loading.value = true
-  isResetting.value = true
-  
+  if (!email.value) { alert("Please enter your Email address first."); return; }
+  loading.value = true; isResetting.value = true
   try {
-    const { error } = await supabase.auth.resetPasswordForEmail(email.value, {
-      redirectTo: `${window.location.origin}/auth`,
-    })
+    const { error } = await supabase.auth.resetPasswordForEmail(email.value, { redirectTo: `${window.location.origin}/auth` })
     if (error) throw error
     alert(`A password reset link has been sent to ${email.value}. Please check your inbox.`)
-  } catch (error) {
-    alert(error.message)
-  } finally {
-    loading.value = false
-    isResetting.value = false
-  }
+  } catch (error) { alert(error.message) } finally { loading.value = false; isResetting.value = false }
 }
 </script>
