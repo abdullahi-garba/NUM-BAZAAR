@@ -228,67 +228,65 @@ const fetchDashboardData = async () => {
 // ==================================
 // PAYSTACK SUBSCRIPTION INTEGRATION
 // ==================================
-const processSubscription = async () => {
-  isProcessingSub.value = true
-  
-  try {
-    if (!import.meta.env.VITE_PAYSTACK_PUBLIC_KEY) {
-      throw new Error("Missing VITE_PAYSTACK_PUBLIC_KEY in your Vercel settings!")
-    }
-
-    if (typeof window.PaystackPop === 'undefined') {
-      throw new Error("Paystack script is not loaded in index.html!")
-    }
-
-    const handler = window.PaystackPop.setup({
-      key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
-      email: currentUser.value.email,
-      // FIXED: Adjusted to 2000 Naira
-      amount: 2000 * 100, 
-      currency: 'NGN',
-      ref: 'SUB_NUM_' + Math.floor((Math.random() * 1000000000) + 1),
-      
-      callback: function(response) {
-        const completeDatabaseUpdates = async () => {
-          try {
-            const expiryDate = new Date();
-            expiryDate.setDate(expiryDate.getDate() + 30);
-
-            const { error: dbError } = await supabase.from('profiles')
-              .update({ 
-                is_subscribed: true, 
-                subscription_expires_at: expiryDate.toISOString() 
-              })
-              .eq('id', currentUser.value.id)
-
-            if (dbError) throw new Error(dbError.message)
-
-            alert("Subscription Successful! Your storefront is now unlocked for 30 days.")
-            hasActiveSubscription.value = true
-            
-          } catch (error) {
-            console.error("Database Error Post-Subscription:", error)
-            alert("Payment successful but database update failed. Please open a support ticket with ref: " + response.reference)
-          } finally {
-            isProcessingSub.value = false
-          }
-        }
-        
-        completeDatabaseUpdates()
-      },
-      onClose: function() {
-        isProcessingSub.value = false
-      }
-    })
-
-    handler.openIframe()
-    
-  } catch (error) {
-    console.error("Initialization Error:", error)
-    alert(`Subscription Error: ${error.message}`)
-    isProcessingSub.value = false
+const processSubscription = () => {
+  // 1. Check if Paystack is already loaded by the browser
+  if (window.PaystackPop) {
+    launchPaystack();
+    return;
   }
-}
+
+  // 2. If not, dynamically inject the Paystack script right now
+  const script = document.createElement('script');
+  script.src = "https://js.paystack.co/v1/inline.js";
+  script.async = true;
+  
+  script.onload = () => {
+    // 3. Launch the payment popup the millisecond the script finishes loading
+    launchPaystack();
+  };
+  
+  script.onerror = () => {
+    alert("Failed to load the secure payment gateway. Please check your internet connection.");
+  };
+  
+  document.body.appendChild(script);
+};
+
+// The actual payment popup logic
+const launchPaystack = () => {
+  const handler = window.PaystackPop.setup({
+    key: 'pk_test_YOUR_PAYSTACK_PUBLIC_KEY', // <-- Ensure your Paystack Public Key is here
+    email: currentUser.value?.email || 'vendor@newgate.edu',
+    amount: 2000 * 100, // ₦2,000 in kobo
+    currency: 'NGN',
+    callback: async function(response) {
+      
+      // Payment was successful!
+      alert('Subscription Successful! Ref: ' + response.reference);
+      
+      try {
+        // Unlock the Storefront in Supabase
+        await supabase
+          .from('profiles')
+          .update({ is_subscribed: true })
+          .eq('id', currentUser.value.id);
+          
+        // Refresh the page to remove the red lock icon
+        window.location.reload();
+      } catch(err) {
+        console.error("Database update failed:", err);
+      }
+      
+    },
+    onClose: function(){
+      alert('Transaction window was closed.');
+    }
+  });
+  
+  handler.openIframe();
+};
+// ==================================
+
 
 const saveBankDetails = async () => {
   isSavingBank.value = true

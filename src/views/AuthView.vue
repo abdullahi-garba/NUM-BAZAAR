@@ -121,21 +121,31 @@ const handleAuth = async () => {
       if (error) throw error
       router.push('/shop')
     } else {
-      const { error } = await supabase.auth.signUp({ 
+      // 1. Create Auth User
+      const { data: authData, error: authError } = await supabase.auth.signUp({ 
         email: email.value, 
-        password: password.value,
-        options: {
-          data: {
-            first_name: firstName.value,
-            last_name: lastName.value,
-            username: username.value,
-            role: accountType.value,
-            campus_affiliation: affiliation.value, // FIXED DATABASE MAPPING
-            business_name: accountType.value === 'seller' ? `${firstName.value}'s Store` : null
-          }
-        }
+        password: password.value 
       })
-      if (error) throw error
+      if (authError) throw authError
+
+      // 2. EXPLICITLY CREATE DATABASE PROFILE
+      if (authData?.user) {
+        const { error: profileError } = await supabase.from('profiles').insert([{
+          id: authData.user.id,
+          first_name: firstName.value,
+          last_name: lastName.value,
+          username: username.value,
+          role: accountType.value,
+          campus_affiliation: affiliation.value,
+          business_name: ['seller', 'external'].includes(accountType.value) ? `${firstName.value}'s Store` : null
+        }])
+        
+        if (profileError) {
+          console.error("Database Profile Error: ", profileError)
+          alert("Account created, but profile setup failed. Please contact support.")
+        }
+      }
+
       router.push('/shop')
     }
   } catch (error) {
