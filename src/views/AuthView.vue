@@ -31,18 +31,18 @@
           <div v-if="!isLogin" class="row g-3 mb-3">
             <div class="col-6">
               <label class="form-label small fw-bold text-uppercase text-dark" style="letter-spacing: 0.05em;">First Name</label>
-              <input type="text" v-model="firstName" class="form-control" placeholder="Abdullahi" style="background-color: #e9ecef; border: none; border-radius: 12px; padding: 14px 20px; font-weight: 500; color: #111827;" :required="!isLogin">
+              <input type="text" v-model="firstName" class="form-control" placeholder="John" style="background-color: #e9ecef; border: none; border-radius: 12px; padding: 14px 20px; font-weight: 500; color: #111827;" :required="!isLogin">
             </div>
             <div class="col-6">
               <label class="form-label small fw-bold text-uppercase text-dark" style="letter-spacing: 0.05em;">Last Name</label>
-              <input type="text" v-model="lastName" class="form-control" placeholder="Garba" style="background-color: #e9ecef; border: none; border-radius: 12px; padding: 14px 20px; font-weight: 500; color: #111827;" :required="!isLogin">
+              <input type="text" v-model="lastName" class="form-control" placeholder="Doe" style="background-color: #e9ecef; border: none; border-radius: 12px; padding: 14px 20px; font-weight: 500; color: #111827;" :required="!isLogin">
             </div>
           </div>
 
           <div v-if="!isLogin" class="mb-3">
             <label class="form-label small fw-bold text-uppercase text-dark" style="letter-spacing: 0.05em;">Username</label>
             <div class="position-relative">
-              <input type="text" v-model="username" class="form-control w-100" placeholder="garba_the_analyst" style="background-color: #e9ecef; border: none; border-radius: 12px; padding: 14px 20px; font-weight: 500; color: #111827;" :required="!isLogin">
+              <input type="text" v-model="username" class="form-control w-100" placeholder="student_99" style="background-color: #e9ecef; border: none; border-radius: 12px; padding: 14px 20px; font-weight: 500; color: #111827;" :required="!isLogin">
               <i class="bi bi-person position-absolute top-50 end-0 translate-middle-y me-3 text-secondary fs-5"></i>
             </div>
           </div>
@@ -68,7 +68,7 @@
           <div class="mb-3">
             <label class="form-label small fw-bold text-uppercase text-dark" style="letter-spacing: 0.05em;">Email Address</label>
             <div class="position-relative">
-              <input type="email" v-model="email" class="form-control w-100" placeholder="abdullahi.garba@newgate.edu" style="background-color: #e9ecef; border: none; border-radius: 12px; padding: 14px 20px; font-weight: 500; color: #111827;" required>
+              <input type="email" v-model="email" class="form-control w-100" placeholder="student@newgate.edu" style="background-color: #e9ecef; border: none; border-radius: 12px; padding: 14px 20px; font-weight: 500; color: #111827;" required>
               <i class="bi bi-at position-absolute top-50 end-0 translate-middle-y me-3 text-secondary fs-5"></i>
             </div>
           </div>

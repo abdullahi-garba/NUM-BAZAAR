@@ -32,8 +32,8 @@
           <div class="p-4 bg-white shadow-sm" style="border-radius: 16px; border: 1px solid rgba(0,0,0,0.05); border-left: 4px solid #b22b1d;">
             <h6 class="text-secondary fw-bold text-uppercase mb-2">Pending Actions</h6>
             <h2 class="text-dark mb-0" style="font-weight: 900;">
-              {{ pendingWithdrawals.length + pendingKYC.length }} 
-              <span class="fs-6 text-danger ms-2 fw-bold" v-if="(pendingWithdrawals.length + pendingKYC.length) > 0">Action Required</span>
+              {{ pendingWithdrawals.length + pendingKYC.length + openTicketsCount }} 
+              <span class="fs-6 text-danger ms-2 fw-bold" v-if="(pendingWithdrawals.length + pendingKYC.length + openTicketsCount) > 0">Action Required</span>
             </h2>
           </div>
         </div>
@@ -51,6 +51,12 @@
           </button>
           
           <button @click="activeTab = 'users'" class="btn rounded-0 px-4 py-3 fw-bold border-0 text-nowrap" :style="activeTab === 'users' ? 'color: #082b59; border-bottom: 3px solid #082b59 !important; background: white;' : 'color: #6b7280;'">User Management</button>
+          
+          <button @click="activeTab = 'tickets'" class="btn rounded-0 px-4 py-3 fw-bold border-0 text-nowrap" :style="activeTab === 'tickets' ? 'color: #082b59; border-bottom: 3px solid #082b59 !important; background: white;' : 'color: #6b7280;'">
+            Support Tickets
+            <span v-if="openTicketsCount > 0" class="badge rounded-pill ms-2" style="background-color: #b22b1d;">{{ openTicketsCount }}</span>
+          </button>
+
           <button @click="activeTab = 'team'" class="btn rounded-0 px-4 py-3 fw-bold border-0 text-nowrap" :style="activeTab === 'team' ? 'color: #082b59; border-bottom: 3px solid #082b59 !important; background: white;' : 'color: #6b7280;'">Team Settings</button>
           <button @click="activeTab = 'logs'" class="btn rounded-0 px-4 py-3 fw-bold border-0 text-nowrap" :style="activeTab === 'logs' ? 'color: #082b59; border-bottom: 3px solid #082b59 !important; background: white;' : 'color: #6b7280;'">Audit Logs</button>
         </div>
@@ -217,6 +223,52 @@
             </div>
           </div>
 
+          <div v-if="activeTab === 'tickets'">
+            <h5 class="fw-bold mb-4 text-dark">Support & Dispute Resolution</h5>
+
+            <div v-if="tickets.length === 0" class="text-center text-muted py-5">
+              <i class="bi bi-inbox fs-1 text-secondary mb-3 d-block"></i>
+              <h5 class="fw-bold">Inbox Empty</h5>
+              <p class="text-secondary fw-medium">No active support tickets in the system.</p>
+            </div>
+
+            <div v-else class="accordion" id="ticketsAccordion">
+              <div v-for="(ticket, index) in tickets" :key="ticket.id" class="accordion-item border-0 mb-3 bg-light rounded-3 overflow-hidden shadow-sm">
+                <h2 class="accordion-header">
+                  <button class="accordion-button collapsed bg-white fw-bold text-dark d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" :data-bs-target="'#ticket-' + index" style="box-shadow: none;">
+                    <span class="d-flex align-items-center gap-3 w-100 pe-3">
+                      <span class="badge" :class="ticket.status === 'open' ? 'bg-danger' : 'bg-success'">{{ ticket.status.toUpperCase() }}</span>
+                      <span class="text-truncate" style="max-width: 60%;">{{ ticket.subject }}</span>
+                      <span class="small text-secondary ms-auto fw-normal">{{ new Date(ticket.created_at).toLocaleDateString() }}</span>
+                    </span>
+                  </button>
+                </h2>
+                <div :id="'ticket-' + index" class="accordion-collapse collapse" data-bs-parent="#ticketsAccordion">
+                  <div class="accordion-body bg-white border-top">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                      <div>
+                        <p class="small text-secondary mb-0 fw-bold text-uppercase" style="letter-spacing: 0.05em;">Reported By</p>
+                        <p class="fw-bold text-dark mb-0">@{{ ticket.profiles?.username || 'Unknown' }} ({{ ticket.profiles?.role || 'user' }})</p>
+                      </div>
+                      <button @click="router.push(`/profile/${ticket.user_id}`)" class="btn btn-sm btn-outline-dark rounded-pill fw-bold">View Profile</button>
+                    </div>
+                    
+                    <div class="p-3 bg-light rounded-3 mb-3">
+                      <p class="mb-0 fw-medium text-dark" style="white-space: pre-wrap;">{{ ticket.description }}</p>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2">
+                      <button v-if="ticket.status === 'open'" @click="resolveTicket(ticket.id)" class="btn" style="background-color: #10b981; color: white; font-weight: bold; border-radius: 999px; padding: 6px 20px;" :disabled="isProcessing">
+                        <i class="bi bi-check-lg me-1"></i> Mark as Resolved
+                      </button>
+                      <button v-else class="btn btn-secondary btn-sm rounded-pill fw-bold px-3" disabled><i class="bi bi-check-all me-1"></i> Resolved</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div v-if="activeTab === 'team'">
             <h5 class="fw-bold mb-4 text-dark border-bottom pb-3">Add Team Member</h5>
             <form @submit.prevent="addTeamMember" class="row g-3 mb-5">
@@ -336,6 +388,7 @@ const pendingProducts = ref([])
 const allUsers = ref([])
 const auditLogs = ref([])
 const teamList = ref([])
+const tickets = ref([]) // NEW: Support Tickets Array
 const userFilter = ref('all')
 
 const newTeam = ref({ name: '', role: '', bio: '', github_url: '', linkedin_url: '', twitter_url: '', email: '' })
@@ -356,6 +409,11 @@ const filteredUsers = computed(() => {
 
 const pendingKYC = computed(() => {
   return allUsers.value.filter(u => u.id_card_url && !u.is_verified)
+})
+
+// NEW: Computed count for Support Tickets
+const openTicketsCount = computed(() => {
+  return tickets.value.filter(t => t.status === 'open').length
 })
 
 const toggleDropdown = (id, event) => { event.stopPropagation(); openDropdownId.value = openDropdownId.value === id ? null : id }
@@ -393,7 +451,27 @@ const fetchAdminData = async () => {
   const { data: teamData } = await supabase.from('team_members').select('*').order('created_at', { ascending: true })
   teamList.value = teamData || []
 
+  // NEW: Fetch Support Tickets
+  const { data: ticketsData } = await supabase.from('tickets').select('*, profiles(username, role)').order('created_at', { ascending: false })
+  tickets.value = ticketsData || []
+
   isLoading.value = false
+}
+
+// NEW: Resolve Ticket Function
+const resolveTicket = async (ticketId) => {
+  if (!confirm("Close this ticket and mark it as resolved?")) return
+  isProcessing.value = true
+  try {
+    await supabase.from('tickets').update({ status: 'resolved' }).eq('id', ticketId)
+    await logAdminAction('Ticket Resolved', `Resolved support ticket ID: ${ticketId}`)
+    alert("Ticket resolved successfully.")
+    await fetchAdminData()
+  } catch (error) {
+    alert("Error resolving ticket: " + error.message)
+  } finally {
+    isProcessing.value = false
+  }
 }
 
 // KYC Approvals Logic

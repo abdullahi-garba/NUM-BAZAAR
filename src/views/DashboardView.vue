@@ -1,359 +1,233 @@
 <template>
-  <div class="container py-5 mt-4">
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 border-bottom pb-3">
-      <div>
-        <h2 class="fw-black mb-0 text-dark" style="color: #082b59;"><i class="bi bi-shop-window me-2"></i>Seller Hub</h2>
-        <p class="text-muted mb-0 mt-1">Manage your escrow, upload products, and track inventory.</p>
+  <div class="bg-light min-vh-100 pb-5">
+    
+    <div style="background-color: #082b59; color: white; padding: 60px 0 40px 0;">
+      <div class="container px-lg-5">
+        <h2 class="fw-black mb-1">Vendor Dashboard</h2>
+        <p class="text-white-50 fw-medium mb-0">Manage your storefront, track escrow sales, and withdraw your earnings.</p>
       </div>
     </div>
 
-    <div v-if="isLoading" class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+    <div class="container px-lg-5" style="margin-top: -30px;">
+      
+      <div v-if="isLoading" class="text-center py-5 bg-white shadow-sm rounded-4"><div class="spinner-border" style="color: #b22b1d;"></div></div>
+      
+      <div v-else-if="profile">
 
-    <div v-else>
-      <ul class="nav nav-tabs fw-bold mb-4 border-bottom-0" role="tablist">
-        <li class="nav-item">
-          <button class="nav-link active px-4 py-3 border-0 rounded-top-4" data-bs-toggle="tab" data-bs-target="#overview" type="button" style="background-color: #e9ecef; color: #082b59;">
-            <i class="bi bi-wallet2 me-2"></i> Financial Overview
-          </button>
-        </li>
-        <li class="nav-item">
-          <button class="nav-link px-4 py-3 border-0 rounded-top-4 ms-2" data-bs-toggle="tab" data-bs-target="#inventory" type="button" style="background-color: #e9ecef; color: #6c757d;">
-            <i class="bi bi-boxes me-2"></i> Upload & Inventory
-          </button>
-        </li>
-      </ul>
-
-      <div class="tab-content">
-        
-        <div class="tab-pane fade show active" id="overview" role="tabpanel">
-          <div class="row g-4">
-            
-            <div class="col-md-6">
-              <div class="card shadow-sm border-0 rounded-4 bg-white p-4 h-100">
-                <div class="d-flex align-items-center mb-3">
-                  <div class="bg-warning-subtle text-warning p-3 rounded-circle me-3"><i class="bi bi-shield-lock-fill fs-3"></i></div>
-                  <div>
-                    <h6 class="fw-bold text-muted text-uppercase mb-0">Locked in Escrow</h6>
-                    <h3 class="fw-black mb-0">₦{{ Number(userProfile.escrow_balance).toLocaleString() }}</h3>
-                  </div>
-                </div>
-                <p class="text-muted small mb-0">Funds waiting for buyers to confirm receipt of their items.</p>
-              </div>
-            </div>
-
-            <div class="col-md-6">
-              <div class="card shadow-sm border-0 rounded-4 bg-white p-4 h-100 border-success border-start border-4">
-                <div class="d-flex align-items-center mb-3">
-                  <div class="bg-success-subtle text-success p-3 rounded-circle me-3"><i class="bi bi-cash-stack fs-3"></i></div>
-                  <div>
-                    <h6 class="fw-bold text-muted text-uppercase mb-0">Available to Withdraw</h6>
-                    <h3 class="fw-black text-success mb-0">₦{{ Number(userProfile.wallet_balance).toLocaleString() }}</h3>
-                  </div>
-                </div>
-                
-                <button v-if="hasBankDetails" @click="requestWithdrawal" class="btn btn-success fw-bold w-100 rounded-pill mt-3 shadow-sm" :disabled="userProfile.wallet_balance <= 0 || isWithdrawing">
-                  {{ isWithdrawing ? 'Processing...' : 'Request Bank Withdrawal' }}
-                </button>
-                <div v-else class="alert alert-warning mt-3 mb-0 small fw-bold">
-                  <i class="bi bi-exclamation-triangle me-2"></i> Please save your bank details below to enable withdrawals.
-                </div>
-              </div>
-            </div>
-
-            <div class="col-12 mt-4">
-              <div class="card shadow-sm border-0 rounded-4 bg-light p-4">
-                <h6 class="fw-bold text-dark border-bottom pb-2 mb-3"><i class="bi bi-bank me-2"></i>Payout Details Setup</h6>
-                <form @submit.prevent="saveBankDetails" class="row g-3">
-                  <div class="col-md-4">
-                    <label class="form-label small fw-bold text-muted">Bank Name</label>
-                    <input type="text" class="form-control" placeholder="e.g. GTBank, Opay, Kuda" v-model="bankForm.bank_name" required>
-                  </div>
-                  <div class="col-md-4">
-                    <label class="form-label small fw-bold text-muted">Account Number</label>
-                    <input type="text" class="form-control" placeholder="10-digit number" v-model="bankForm.account_number" required>
-                  </div>
-                  <div class="col-md-4">
-                    <label class="form-label small fw-bold text-muted">Account Name</label>
-                    <input type="text" class="form-control" placeholder="Legal Name" v-model="bankForm.account_name" required>
-                  </div>
-                  <div class="col-12 text-end">
-                    <button type="submit" class="btn btn-dark btn-sm fw-bold rounded-pill px-4" :disabled="isSavingBank">
-                      {{ isSavingBank ? 'Saving...' : 'Save Details' }}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-
+        <div v-if="!profile.is_subscribed" class="bg-white p-5 text-center shadow-sm" style="border-radius: 16px; border: 1px solid rgba(0,0,0,0.05);">
+          <div class="rounded-circle d-inline-flex justify-content-center align-items-center mb-4" style="width: 80px; height: 80px; background-color: #fef2f2; color: #b22b1d;">
+            <i class="bi bi-lock-fill fs-1"></i>
           </div>
+          <h3 class="fw-bold text-dark">Unlock Your Storefront</h3>
+          <p class="text-secondary fw-medium mx-auto mb-4" style="max-width: 500px;">
+            To start selling to the Newgate University campus, you need to activate your vendor account. This includes access to the secure Escrow system and instant bank payouts.
+          </p>
+          
+          <div class="bg-light p-4 rounded-4 mx-auto mb-4" style="max-width: 400px; border: 1px solid rgba(0,0,0,0.05);">
+            <h5 class="fw-bold text-dark mb-1">One-Time Activation</h5>
+            <h2 class="fw-black mb-0" style="color: #082b59;">₦2,000</h2>
+          </div>
+
+          <button @click="processSubscription" class="btn fw-bold py-3 px-5 rounded-pill shadow-sm d-inline-flex align-items-center gap-2" style="background-color: #082b59; color: white; font-size: 1.1rem;" :disabled="isProcessing">
+            <span v-if="isProcessing" class="spinner-border spinner-border-sm"></span>
+            <i v-else class="bi bi-credit-card-fill"></i>
+            {{ isProcessing ? 'Loading Secure Payment...' : 'Pay with Paystack' }}
+          </button>
         </div>
 
-        <div class="tab-pane fade" id="inventory" role="tabpanel">
+        <div v-else class="row g-4">
           
-          <div class="card shadow-sm border-0 rounded-4 bg-white mb-5 overflow-hidden">
-            <div class="card-header bg-dark text-white p-4 border-0">
-              <h5 class="fw-bold mb-0"><i class="bi bi-upload me-2"></i>Upload New Merchandise</h5>
+          <div class="col-md-6">
+            <div class="bg-white p-4 shadow-sm h-100 position-relative overflow-hidden" style="border-radius: 16px; border: 1px solid rgba(0,0,0,0.05);">
+              <div class="position-absolute top-0 end-0 p-3 opacity-25"><i class="bi bi-wallet2" style="font-size: 4rem; color: #10b981;"></i></div>
+              <h6 class="fw-bold text-secondary text-uppercase small mb-2" style="letter-spacing: 0.05em;">Available Wallet Balance</h6>
+              <h1 class="fw-black mb-1" style="color: #10b981; font-size: 2.5rem;">₦{{ Number(profile.wallet_balance || 0).toLocaleString() }}</h1>
+              <p class="small text-secondary fw-medium mb-0">Funds ready for instant bank withdrawal.</p>
             </div>
-            
-            <div v-if="!hasActiveSubscription && userProfile.role !== 'admin'" class="card-body p-5 text-center">
-              <i class="bi bi-lock-fill text-danger fs-1 mb-3 d-block"></i>
-              <h4 class="fw-bold">Storefront Locked</h4>
-              <p class="text-muted mb-4">You need an active 30-day seller subscription to upload new merchandise.</p>
-              
-              <button @click="processSubscription" :disabled="isProcessingSub" class="btn btn-primary fw-bold rounded-pill px-5" style="background-color: #082b59; border: none;">
-                {{ isProcessingSub ? 'Loading Paystack...' : 'Subscribe (₦2,000 / 30 Days)' }}
-              </button>
-            </div>
+          </div>
 
-            <div v-else class="card-body p-4 p-md-5">
-              <form @submit.prevent="publishProduct" class="row g-4">
-                <div class="col-md-6"><label class="fw-bold text-muted small text-uppercase">Product Title</label><input type="text" class="form-control form-control-lg bg-light border-0" v-model="newProduct.name" required></div>
-                <div class="col-md-3"><label class="fw-bold text-muted small text-uppercase">Price (₦)</label><input type="number" class="form-control form-control-lg bg-light border-0" v-model="newProduct.price" required></div>
-                <div class="col-md-3"><label class="fw-bold text-muted small text-uppercase">Initial Stock</label><input type="number" class="form-control form-control-lg bg-light border-0" v-model="newProduct.stock" min="1" required></div>
-                <div class="col-md-4">
-                  <label class="fw-bold text-muted small text-uppercase">Category</label>
-                  <select class="form-select form-select-lg bg-light border-0" v-model="newProduct.category" required>
-                    <option>Food & Beverages</option><option>IT & Tech</option><option>Fashion & Clothing</option><option>Textbooks</option><option>Services</option><option>Other</option>
-                  </select>
+          <div class="col-md-6">
+            <div class="bg-white p-4 shadow-sm h-100 position-relative overflow-hidden" style="border-radius: 16px; border: 1px solid rgba(0,0,0,0.05);">
+              <div class="position-absolute top-0 end-0 p-3 opacity-25"><i class="bi bi-shield-lock" style="font-size: 4rem; color: #f59e0b;"></i></div>
+              <h6 class="fw-bold text-secondary text-uppercase small mb-2" style="letter-spacing: 0.05em;">Pending in Escrow</h6>
+              <h1 class="fw-black mb-1" style="color: #f59e0b; font-size: 2.5rem;">₦{{ Number(profile.escrow_balance || 0).toLocaleString() }}</h1>
+              <p class="small text-secondary fw-medium mb-0">Funds locked until buyers confirm delivery.</p>
+            </div>
+          </div>
+
+          <div class="col-lg-8">
+            <div class="bg-white p-4 shadow-sm mb-4" style="border-radius: 16px; border: 1px solid rgba(0,0,0,0.05);">
+              <h5 class="fw-bold text-dark mb-4 border-bottom pb-3"><i class="bi bi-bank2 me-2" style="color: #082b59;"></i> Withdraw to Bank Account</h5>
+              
+              <form @submit.prevent="requestWithdrawal">
+                <div class="row g-3">
+                  <div class="col-md-4">
+                    <label class="form-label small fw-bold text-dark">Amount (₦)</label>
+                    <input type="number" v-model="withdrawForm.amount" class="form-control" style="background-color: #e9ecef; border: none; border-radius: 12px; padding: 12px 15px; font-weight: 500; color: #111827;" :max="profile.wallet_balance" required>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label small fw-bold text-dark">Select Bank</label>
+                    <select v-model="withdrawForm.bankCode" class="form-select" style="background-color: #e9ecef; border: none; border-radius: 12px; padding: 12px 15px; font-weight: 500; color: #111827;" required>
+                      <option value="" disabled>Choose...</option>
+                      <option value="044">Access Bank</option>
+                      <option value="058">GTBank</option>
+                      <option value="033">UBA</option>
+                      <option value="057">Zenith Bank</option>
+                      <option value="011">First Bank</option>
+                      <option value="50515">Moniepoint</option>
+                      <option value="090267">Kuda Bank</option>
+                      <option value="100004">Opay</option>
+                    </select>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label small fw-bold text-dark">Account Number</label>
+                    <input type="text" v-model="withdrawForm.accountNumber" class="form-control" style="background-color: #e9ecef; border: none; border-radius: 12px; padding: 12px 15px; font-weight: 500; color: #111827;" maxlength="10" required>
+                  </div>
                 </div>
-                <div class="col-md-4"><label class="fw-bold text-muted small text-uppercase">Upload Images</label><input type="file" class="form-control form-control-lg bg-light border-0" @change="e => imageFiles = Array.from(e.target.files)" accept="image/*" multiple required></div>
-                <div class="col-md-4"><label class="fw-bold text-muted small text-uppercase">Tags (Comma separated)</label><input type="text" class="form-control form-control-lg bg-light border-0" v-model="newProduct.tagsStr"></div>
-                <div class="col-12"><label class="fw-bold text-muted small text-uppercase">Detailed Description</label><textarea class="form-control bg-light border-0" v-model="newProduct.description" rows="3" required></textarea></div>
                 
-                <div class="col-12 text-end mt-4 pt-3 border-top">
-                  <button type="submit" class="btn btn-primary btn-lg fw-bold px-5 rounded-pill shadow" :disabled="isUploadingProduct" style="background-color: #082b59; border: none;">
-                    {{ isUploadingProduct ? 'Uploading...' : 'Push to Live Feed' }}
+                <div class="mt-4 text-end">
+                  <button type="submit" class="btn fw-bold px-5 py-2 rounded-pill shadow-sm" style="background-color: #10b981; color: white;" :disabled="isWithdrawing || profile.wallet_balance <= 0">
+                    <span v-if="isWithdrawing" class="spinner-border spinner-border-sm me-2"></span> 
+                    {{ isWithdrawing ? 'Processing Transfer...' : 'Withdraw Funds' }}
                   </button>
                 </div>
               </form>
             </div>
           </div>
 
-          <div class="card shadow-sm border-0 rounded-4 bg-white p-4">
-            <h5 class="fw-bold mb-4 border-bottom pb-3 text-dark"><i class="bi bi-clipboard-data me-2"></i>Inventory Manager</h5>
-            
-            <div v-if="sellerProducts.length === 0" class="text-center text-muted py-4">You haven't uploaded any products yet.</div>
-            
-            <div v-else class="table-responsive">
-              <table class="table table-hover align-middle">
-                <thead class="table-light">
-                  <tr>
-                    <th>Product</th>
-                    <th>Price</th>
-                    <th>Status</th>
-                    <th>Stock Remaining</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="product in sellerProducts" :key="product.id">
-                    <td>
-                      <div class="d-flex align-items-center">
-                        <img :src="product.image_urls?.[0] || 'https://via.placeholder.com/50'" class="rounded-3 me-3" style="width: 50px; height: 50px; object-fit: cover;">
-                        <span class="fw-bold text-truncate" style="max-width: 200px; display: inline-block;">{{ product.title }}</span>
-                      </div>
-                    </td>
-                    <td class="fw-bold text-danger">₦{{ product.price.toLocaleString() }}</td>
-                    <td>
-                      <span v-if="product.is_approved" class="badge bg-success-subtle text-success border border-success">Live</span>
-                      <span v-else class="badge bg-warning-subtle text-warning border border-warning">Pending</span>
-                    </td>
-                    <td style="width: 150px;">
-                      <input type="number" class="form-control bg-light" v-model="product.stock" min="0">
-                    </td>
-                    <td>
-                      <button @click="updateStock(product)" class="btn btn-sm btn-outline-primary fw-bold rounded-pill">Update</button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+          <div class="col-lg-4">
+            <div class="bg-white p-4 shadow-sm d-flex flex-column justify-content-center align-items-center text-center h-100" style="border-radius: 16px; border: 1px solid rgba(0,0,0,0.05);">
+              <i class="bi bi-box-seam mb-3" style="font-size: 3rem; color: #b22b1d;"></i>
+              <h5 class="fw-bold text-dark mb-2">Manage Storefront</h5>
+              <p class="text-secondary small fw-medium mb-4">Post new items, track pending sales, and view your public profile.</p>
+              <button @click="router.push(`/profile/${currentUser.id}`)" class="btn w-100 fw-bold py-2 rounded-pill" style="background-color: #f3f4f6; color: #111827; border: 1px solid #e5e7eb;">
+                Go to My Profile <i class="bi bi-arrow-right ms-1"></i>
+              </button>
             </div>
           </div>
 
         </div>
+
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { supabase } from '../lib/supabaseClient'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+const currentUser = ref(null)
+const profile = ref(null)
 
 const isLoading = ref(true)
-const currentUser = ref(null)
-const userProfile = ref({})
-const hasActiveSubscription = ref(false)
-const isProcessingSub = ref(false)
-
-// Financials & Bank Details
+const isProcessing = ref(false)
 const isWithdrawing = ref(false)
-const isSavingBank = ref(false)
-const bankForm = ref({ bank_name: '', account_number: '', account_name: '' })
 
-const hasBankDetails = computed(() => {
-  return userProfile.value.bank_name && userProfile.value.account_number && userProfile.value.account_name
-})
+const withdrawForm = ref({ amount: '', bankCode: '', accountNumber: '' })
 
-// Upload & Inventory
-const isUploadingProduct = ref(false)
-const sellerProducts = ref([])
-const newProduct = ref({ name: '', price: '', stock: 1, category: 'Food & Beverages', description: '', tagsStr: '' })
-const imageFiles = ref([])
-
-const fetchDashboardData = async () => {
+onMounted(async () => {
   isLoading.value = true
   const { data: sessionData } = await supabase.auth.getSession()
   
   if (sessionData.session) {
     currentUser.value = sessionData.session.user
     
-    const { data: profile } = await supabase.from('profiles').select('*').eq('id', currentUser.value.id).single()
-    if (profile) {
-      userProfile.value = profile
-      bankForm.value = { 
-        bank_name: profile.bank_name || '', 
-        account_number: profile.account_number || '', 
-        account_name: profile.account_name || '' 
-      }
-      hasActiveSubscription.value = profile.is_subscribed && profile.subscription_expires_at && (new Date(profile.subscription_expires_at) > new Date())
-    }
-
-    const { data: products } = await supabase.from('products').select('*').eq('seller_id', currentUser.value.id).order('created_at', { ascending: false })
-    sellerProducts.value = products || []
+    // Fetch profile to check subscription & balances
+    const { data: userProfile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', currentUser.value.id)
+      .single()
+      
+    profile.value = userProfile
+  } else {
+    router.push('/auth')
   }
   isLoading.value = false
-}
+})
 
-// ==================================
-// PAYSTACK SUBSCRIPTION INTEGRATION
-// ==================================
+// ==========================================
+// 1. PAYSTACK SUBSCRIPTION LOGIC
+// ==========================================
 const processSubscription = () => {
-  // 1. Check if Paystack is already loaded by the browser
   if (window.PaystackPop) {
     launchPaystack();
     return;
   }
 
-  // 2. If not, dynamically inject the Paystack script right now
+  // Inject Paystack script dynamically
   const script = document.createElement('script');
   script.src = "https://js.paystack.co/v1/inline.js";
   script.async = true;
-  
-  script.onload = () => {
-    // 3. Launch the payment popup the millisecond the script finishes loading
-    launchPaystack();
-  };
-  
-  script.onerror = () => {
-    alert("Failed to load the secure payment gateway. Please check your internet connection.");
-  };
-  
+  script.onload = () => launchPaystack();
+  script.onerror = () => alert("Failed to load secure payment gateway. Please check your internet connection.");
   document.body.appendChild(script);
 };
 
-// The actual payment popup logic
 const launchPaystack = () => {
   const handler = window.PaystackPop.setup({
-    key: 'pk_test_YOUR_PAYSTACK_PUBLIC_KEY', // <-- Ensure your Paystack Public Key is here
-    email: currentUser.value?.email || 'vendor@newgate.edu',
+    key: 'pk_test_YOUR_PAYSTACK_PUBLIC_KEY', // <-- REPLACE WITH YOUR KEY
+    email: currentUser.value.email,
     amount: 2000 * 100, // ₦2,000 in kobo
     currency: 'NGN',
     callback: async function(response) {
-      
-      // Payment was successful!
       alert('Subscription Successful! Ref: ' + response.reference);
-      
       try {
-        // Unlock the Storefront in Supabase
-        await supabase
-          .from('profiles')
-          .update({ is_subscribed: true })
-          .eq('id', currentUser.value.id);
-          
-        // Refresh the page to remove the red lock icon
+        await supabase.from('profiles').update({ is_subscribed: true }).eq('id', currentUser.value.id);
         window.location.reload();
       } catch(err) {
         console.error("Database update failed:", err);
       }
-      
     },
     onClose: function(){
       alert('Transaction window was closed.');
     }
   });
-  
   handler.openIframe();
 };
-// ==================================
 
-
-const saveBankDetails = async () => {
-  isSavingBank.value = true
-  try {
-    const { error } = await supabase.from('profiles').update(bankForm.value).eq('id', currentUser.value.id)
-    if (error) throw error
-    alert('Bank Details Saved Successfully!')
-    await fetchDashboardData()
-  } catch (error) { alert('Error saving bank details: ' + error.message) } finally { isSavingBank.value = false }
-}
-
+// ==========================================
+// 2. SUPABASE EDGE FUNCTION WITHDRAWAL LOGIC
+// ==========================================
 const requestWithdrawal = async () => {
-  if(!confirm("Request bank transfer of ₦" + userProfile.value.wallet_balance + " to " + userProfile.value.bank_name + "?")) return;
-  isWithdrawing.value = true
+  if (withdrawForm.value.amount > profile.value.wallet_balance) {
+    return alert("You cannot withdraw more than your available balance.");
+  }
+  if (withdrawForm.value.amount < 100) {
+    return alert("Minimum withdrawal amount is ₦100.");
+  }
+
+  isWithdrawing.value = true;
   
   try {
-    const amount = userProfile.value.wallet_balance
-    const payoutDescription = `Bank Payout Request - ${userProfile.value.bank_name} | ${userProfile.value.account_number} | ${userProfile.value.account_name}`
-    
-    const { error: walletError } = await supabase.from('profiles').update({ wallet_balance: 0 }).eq('id', currentUser.value.id)
-    if (walletError) throw walletError
-    
-    const { error: transError } = await supabase.from('transactions').insert([{ 
-      profile_id: currentUser.value.id, amount: amount, type: 'debit', status: 'Pending', description: payoutDescription 
-    }])
-    if (transError) throw transError
+    // This calls the Supabase Edge Function: supabase/functions/paystack-payout/index.ts
+    const { data, error } = await supabase.functions.invoke('paystack-payout', {
+      body: withdrawForm.value
+    });
 
-    alert("Withdrawal requested successfully! Our Admin will wire the funds to your registered account shortly.")
-    await fetchDashboardData()
-  } catch(error) { alert("Error requesting withdrawal: " + error.message) } finally { isWithdrawing.value = false }
-}
+    if (error) throw new Error(error.message);
+    if (data.error) throw new Error(data.error);
 
-const publishProduct = async () => {
-  if (imageFiles.value.length === 0) return alert("Please select at least one image.")
-  isUploadingProduct.value = true
-  
-  try {
-    let uploadedUrls = []
-    for (const file of imageFiles.value) {
-      const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${file.name.split('.').pop()}`
-      await supabase.storage.from('product-images').upload(fileName, file)
-      const { data } = supabase.storage.from('product-images').getPublicUrl(fileName)
-      uploadedUrls.push(data.publicUrl)
-    }
+    alert("Withdrawal successful! The funds are on their way to your bank account.");
     
-    const tagsArray = newProduct.value.tagsStr.split(',').map(tag => tag.trim()).filter(tag => tag !== '');
+    // Instantly update the UI balance
+    profile.value.wallet_balance -= withdrawForm.value.amount;
     
-    await supabase.from('products').insert([{ 
-      title: newProduct.value.name, price: Number(newProduct.value.price), stock: Number(newProduct.value.stock),
-      category: newProduct.value.category, description: newProduct.value.description, tags: tagsArray, 
-      image_urls: uploadedUrls, seller_id: currentUser.value.id 
-    }])
-    
-    alert("Merchandise Listed! Pending Admin Approval.")
-    newProduct.value = { name: '', price: '', stock: 1, category: 'Food & Beverages', description: '', tagsStr: '' }
-    imageFiles.value = []
-    await fetchDashboardData()
-    
-  } catch (error) { alert(error.message) } finally { isUploadingProduct.value = false }
-}
+    // Reset form
+    withdrawForm.value = { amount: '', bankCode: '', accountNumber: '' };
 
-const updateStock = async (product) => {
-  try {
-    await supabase.from('products').update({ stock: Number(product.stock) }).eq('id', product.id)
-    alert('Stock updated successfully!')
-  } catch (error) { alert('Failed to update stock.') }
-}
-
-onMounted(() => fetchDashboardData())
+  } catch (error) {
+    console.error("Payout Error:", error);
+    alert("Withdrawal failed: " + error.message);
+  } finally {
+    isWithdrawing.value = false;
+  }
+};
 </script>
+
+<style scoped>
+input, select { font-size: 16px !important; }
+</style>
