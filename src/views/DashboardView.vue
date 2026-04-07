@@ -20,7 +20,7 @@
           </div>
           <h3 class="fw-bold text-dark">Unlock Your Storefront</h3>
           <p class="text-secondary fw-medium mx-auto mb-4" style="max-width: 500px;">
-            To start selling to the Newgate University campus, you need to activate your vendor account. This includes access to the secure Escrow system and instant bank payouts.
+            To start selling to the Newgate University campus, you need to activate your vendor account. This includes access to the secure Escrow system and bank payouts.
           </p>
           
           <div class="bg-light p-4 rounded-4 mx-auto mb-4" style="max-width: 400px; border: 1px solid rgba(0,0,0,0.05);">
@@ -42,7 +42,7 @@
               <div class="position-absolute top-0 end-0 p-3 opacity-25"><i class="bi bi-wallet2" style="font-size: 4rem; color: #10b981;"></i></div>
               <h6 class="fw-bold text-secondary text-uppercase small mb-2" style="letter-spacing: 0.05em;">Available Wallet Balance</h6>
               <h1 class="fw-black mb-1" style="color: #10b981; font-size: 2.5rem;">₦{{ Number(profile.wallet_balance || 0).toLocaleString() }}</h1>
-              <p class="small text-secondary fw-medium mb-0">Funds ready for instant bank withdrawal.</p>
+              <p class="small text-secondary fw-medium mb-0">Funds ready for bank withdrawal.</p>
             </div>
           </div>
 
@@ -57,7 +57,7 @@
 
           <div class="col-lg-8">
             <div class="bg-white p-4 shadow-sm mb-4" style="border-radius: 16px; border: 1px solid rgba(0,0,0,0.05);">
-              <h5 class="fw-bold text-dark mb-4 border-bottom pb-3"><i class="bi bi-bank2 me-2" style="color: #082b59;"></i> Withdraw to Bank Account</h5>
+              <h5 class="fw-bold text-dark mb-4 border-bottom pb-3"><i class="bi bi-bank2 me-2" style="color: #082b59;"></i> Request Bank Withdrawal</h5>
               
               <form @submit.prevent="requestWithdrawal">
                 <div class="row g-3">
@@ -67,16 +67,17 @@
                   </div>
                   <div class="col-md-4">
                     <label class="form-label small fw-bold text-dark">Select Bank</label>
-                    <select v-model="withdrawForm.bankCode" class="form-select" style="background-color: #e9ecef; border: none; border-radius: 12px; padding: 12px 15px; font-weight: 500; color: #111827;" required>
+                    <select v-model="withdrawForm.bankName" class="form-select" style="background-color: #e9ecef; border: none; border-radius: 12px; padding: 12px 15px; font-weight: 500; color: #111827;" required>
                       <option value="" disabled>Choose...</option>
-                      <option value="044">Access Bank</option>
-                      <option value="058">GTBank</option>
-                      <option value="033">UBA</option>
-                      <option value="057">Zenith Bank</option>
-                      <option value="011">First Bank</option>
-                      <option value="50515">Moniepoint</option>
-                      <option value="090267">Kuda Bank</option>
-                      <option value="100004">Opay</option>
+                      <option value="Access Bank">Access Bank</option>
+                      <option value="GTBank">GTBank</option>
+                      <option value="UBA">UBA</option>
+                      <option value="Zenith Bank">Zenith Bank</option>
+                      <option value="First Bank">First Bank</option>
+                      <option value="Moniepoint">Moniepoint</option>
+                      <option value="Kuda Bank">Kuda Bank</option>
+                      <option value="Opay">Opay</option>
+                      <option value="Palmpay">Palmpay</option>
                     </select>
                   </div>
                   <div class="col-md-4">
@@ -88,7 +89,7 @@
                 <div class="mt-4 text-end">
                   <button type="submit" class="btn fw-bold px-5 py-2 rounded-pill shadow-sm" style="background-color: #10b981; color: white;" :disabled="isWithdrawing || profile.wallet_balance <= 0">
                     <span v-if="isWithdrawing" class="spinner-border spinner-border-sm me-2"></span> 
-                    {{ isWithdrawing ? 'Processing Transfer...' : 'Withdraw Funds' }}
+                    {{ isWithdrawing ? 'Submitting Request...' : 'Request Payout' }}
                   </button>
                 </div>
               </form>
@@ -126,7 +127,7 @@ const isLoading = ref(true)
 const isProcessing = ref(false)
 const isWithdrawing = ref(false)
 
-const withdrawForm = ref({ amount: '', bankCode: '', accountNumber: '' })
+const withdrawForm = ref({ amount: '', bankName: '', accountNumber: '' })
 
 onMounted(async () => {
   isLoading.value = true
@@ -190,7 +191,7 @@ const launchPaystack = () => {
 };
 
 // ==========================================
-// 2. SUPABASE EDGE FUNCTION WITHDRAWAL LOGIC
+// 2. MANUAL WITHDRAWAL LOGIC
 // ==========================================
 const requestWithdrawal = async () => {
   if (withdrawForm.value.amount > profile.value.wallet_balance) {
@@ -203,25 +204,40 @@ const requestWithdrawal = async () => {
   isWithdrawing.value = true;
   
   try {
-    // This calls the Supabase Edge Function: supabase/functions/paystack-payout/index.ts
-    const { data, error } = await supabase.functions.invoke('paystack-payout', {
-      body: withdrawForm.value
-    });
+    // 1. Deduct the funds from the user's wallet immediately so they can't double-request
+    const newBalance = Number(profile.value.wallet_balance) - Number(withdrawForm.value.amount);
+    
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({ wallet_balance: newBalance })
+      .eq('id', currentUser.value.id);
 
-    if (error) throw new Error(error.message);
-    if (data.error) throw new Error(data.error);
+    if (updateError) throw updateError;
 
-    alert("Withdrawal successful! The funds are on their way to your bank account.");
+    // 2. Create a pending transaction for the Admin to review
+    const { error: txError } = await supabase
+      .from('transactions')
+      .insert([{
+        profile_id: currentUser.value.id,
+        amount: withdrawForm.value.amount,
+        type: 'debit',
+        status: 'Pending',
+        description: `Manual Payout - ${withdrawForm.value.bankName} (${withdrawForm.value.accountNumber})`
+      }]);
+
+    if (txError) throw txError;
+
+    alert("Withdrawal requested successfully! The Admin team will review and process your transfer shortly.");
     
     // Instantly update the UI balance
-    profile.value.wallet_balance -= withdrawForm.value.amount;
+    profile.value.wallet_balance = newBalance;
     
     // Reset form
-    withdrawForm.value = { amount: '', bankCode: '', accountNumber: '' };
+    withdrawForm.value = { amount: '', bankName: '', accountNumber: '' };
 
   } catch (error) {
     console.error("Payout Error:", error);
-    alert("Withdrawal failed: " + error.message);
+    alert("Withdrawal request failed: " + error.message);
   } finally {
     isWithdrawing.value = false;
   }
