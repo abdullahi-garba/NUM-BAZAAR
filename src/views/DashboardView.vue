@@ -334,7 +334,7 @@ const verifyAndSaveSubscription = async (reference) => {
 
 const launchPaystack = () => {
   const handler = window.PaystackPop.setup({
-    key: 'pk_test_YOUR_PAYSTACK_PUBLIC_KEY', // <-- REPLACE WITH YOUR KEY
+    key: 'pk_live_1e69e349598cdd6961ebbe480be6264149d9bd1f', // <-- REPLACE WITH YOUR KEY
     email: currentUser.value.email,
     amount: 2000 * 100, // ₦2,000 in kobo
     currency: 'NGN',
