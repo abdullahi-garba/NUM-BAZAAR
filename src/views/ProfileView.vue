@@ -236,18 +236,29 @@
                     <img :src="order.product_image || 'https://via.placeholder.com/60'" class="rounded object-fit-cover shadow-sm" style="width: 60px; height: 60px;">
                     <div>
                       <h6 class="fw-bold text-dark mb-1">{{ order.product_name }}</h6>
-                      <span class="badge" :class="order.status.includes('Completed') ? 'bg-success' : 'bg-warning text-dark border border-warning'">
-                        <i class="bi" :class="order.status.includes('Completed') ? 'bi-check-circle-fill' : 'bi-lock-fill'"></i> 
+                      
+                      <span class="badge" :class="{'bg-success': order.status.includes('Completed'), 'bg-danger': order.status.includes('Disputed'), 'bg-warning text-dark border border-warning': !order.status.includes('Completed') && !order.status.includes('Disputed')}">
+                        <i class="bi" :class="{'bi-check-circle-fill': order.status.includes('Completed'), 'bi-shield-lock-fill': order.status.includes('Disputed'), 'bi-lock-fill': !order.status.includes('Completed') && !order.status.includes('Disputed')}"></i> 
                         {{ order.status }}
                       </span>
                     </div>
                   </div>
+                  
                   <div class="d-flex flex-column align-items-md-end">
                     <h5 class="fw-bold mb-2" style="color: #b22b1d;">₦{{ Number(order.product_price).toLocaleString() }}</h5>
-                    <button v-if="!order.status.includes('Completed')" @click="confirmDelivery(order)" class="btn btn-sm fw-bold rounded-pill px-3 shadow-sm" style="background-color: #10b981; color: white;" :disabled="isProcessing">
-                      <span v-if="isProcessing" class="spinner-border spinner-border-sm me-1"></span>
-                      <i v-else class="bi bi-box-seam me-1"></i> Confirm Received
-                    </button>
+                    
+                    <div v-if="!order.status.includes('Completed') && !order.status.includes('Disputed')" class="d-flex gap-2">
+                      <button @click="confirmDelivery(order)" class="btn btn-sm fw-bold rounded-pill px-3 shadow-sm" style="background-color: #10b981; color: white;" :disabled="isProcessing">
+                        <span v-if="isProcessing" class="spinner-border spinner-border-sm me-1"></span>
+                        <i v-else class="bi bi-box-seam me-1"></i> Confirm Received
+                      </button>
+                      
+                      <button @click="reportIssue(order)" class="btn btn-sm btn-outline-danger fw-bold rounded-pill px-3 shadow-sm" :disabled="isProcessing">
+                        <i class="bi bi-flag-fill me-1"></i> Report Issue
+                      </button>
+                    </div>
+
+                    <span v-else-if="order.status.includes('Disputed')" class="text-danger small fw-bold"><i class="bi bi-exclamation-triangle-fill"></i> Transaction Frozen</span>
                     <span v-else class="text-success small fw-bold"><i class="bi bi-check2-all"></i> Funds Released</span>
                   </div>
                 </div>
@@ -406,6 +417,47 @@ const confirmDelivery = async (order) => {
     
   } catch (error) {
     alert("Error releasing funds: " + error.message);
+  } finally {
+    isProcessing.value = false;
+  }
+};
+
+// ==========================================
+// NEW: REPORT ISSUE / FREEZE TRANSACTION
+// ==========================================
+const reportIssue = async (order) => {
+  const reason = prompt("Please describe the issue (e.g., Seller didn't show up, Item was broken). This will freeze the funds and notify the Admin.");
+  if (!reason || reason.trim() === '') return; 
+
+  isProcessing.value = true;
+
+  try {
+    // 1. Change the order status to 'Disputed'
+    const { error: orderError } = await supabase
+      .from('orders')
+      .update({ status: 'Disputed' })
+      .eq('id', order.id);
+
+    if (orderError) throw orderError;
+
+    // 2. Automatically create a Support Ticket
+    const { error: ticketError } = await supabase
+      .from('support_tickets')
+      .insert([{
+        user_id: profile.value.id,
+        subject: `URGENT ESCROW DISPUTE: Order #${String(order.id).substring(0,8)}`,
+        message: `Buyer reported an issue and froze the transaction. Reason: "${reason}". Please contact both parties to resolve.`,
+        status: 'Open'
+      }]);
+
+    if (ticketError) throw ticketError;
+
+    alert("Transaction frozen! The Escrow funds are locked and an Admin has been notified.");
+    order.status = 'Disputed'; // Update UI instantly
+
+  } catch (error) {
+    console.error("Dispute Error:", error);
+    alert("Could not report issue: " + error.message);
   } finally {
     isProcessing.value = false;
   }
