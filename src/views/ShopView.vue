@@ -24,11 +24,13 @@
                 <i class="bi bi-grid-fill me-3"></i> Feed
               </a>
             </li>
-            <li class="nav-item" v-if="['seller', 'external'].includes(userRole)">
+            
+            <li class="nav-item" v-if="currentUser">
               <a href="#" @click.prevent="currentView = 'listings'" class="nav-link rounded px-3 py-2 d-flex align-items-center" :style="currentView === 'listings' ? 'background-color: #082b59; color: white; font-weight: 700;' : 'color: #111827; font-weight: 500;'">
                 <i class="bi bi-shop me-3"></i> My Listings
               </a>
             </li>
+            
             <li class="nav-item">
               <a href="#" @click.prevent="currentView = 'saved'" class="nav-link rounded px-3 py-2 d-flex align-items-center" :style="currentView === 'saved' ? 'background-color: #082b59; color: white; font-weight: 700;' : 'color: #111827; font-weight: 500;'">
                 <i class="bi bi-bookmark-fill me-3"></i> Saved Items
@@ -65,12 +67,15 @@
         <div class="d-flex overflow-auto pb-2 mb-4 gap-2" style="-ms-overflow-style: none; scrollbar-width: none;">
           <button @click="currentView = 'feed'; activeCategory = 'All'" class="btn rounded-pill px-4 text-nowrap" :class="currentView === 'feed' && activeCategory === 'All' ? 'bg-dark text-white fw-bold' : 'bg-white border text-dark fw-medium'">All Items</button>
           
-          <button v-if="['seller', 'external'].includes(userRole)" @click="currentView = 'listings'" class="btn rounded-pill px-4 text-nowrap" :class="currentView === 'listings' ? 'bg-dark text-white fw-bold' : 'bg-white border text-dark fw-medium'"><i class="bi bi-shop me-1"></i> My Listings</button>
+          <button v-if="currentUser" @click="currentView = 'listings'" class="btn rounded-pill px-4 text-nowrap" :class="currentView === 'listings' ? 'bg-dark text-white fw-bold' : 'bg-white border text-dark fw-medium'"><i class="bi bi-shop me-1"></i> My Listings</button>
           <button @click="currentView = 'saved'" class="btn rounded-pill px-4 text-nowrap" :class="currentView === 'saved' ? 'bg-dark text-white fw-bold' : 'bg-white border text-dark fw-medium'"><i class="bi bi-bookmark-fill me-1"></i> Saved Items</button>
           
           <button @click="currentView = 'feed'; activeCategory = 'Textbooks'" class="btn rounded-pill px-4 text-nowrap" :class="currentView === 'feed' && activeCategory === 'Textbooks' ? 'bg-dark text-white fw-bold' : 'bg-white border text-dark fw-medium'">Textbooks</button>
           <button @click="currentView = 'feed'; activeCategory = 'IT & Tech'" class="btn rounded-pill px-4 text-nowrap" :class="currentView === 'feed' && activeCategory === 'IT & Tech' ? 'bg-dark text-white fw-bold' : 'bg-white border text-dark fw-medium'">IT & Tech</button>
         </div>
+
+        <h4 v-if="currentView === 'listings'" class="mb-4 fw-bold" style="color: #082b59;">My Active Listings</h4>
+        <h4 v-if="currentView === 'saved'" class="mb-4 fw-bold" style="color: #082b59;">Saved Items</h4>
 
         <div v-if="displayedProducts.length === 0" class="text-center py-5">
           <i class="bi bi-inbox fs-1 text-secondary mb-3 d-block"></i>
@@ -117,7 +122,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { supabase } from '../lib/supabaseClient'
 import { useRouter } from 'vue-router'
 
@@ -128,6 +133,7 @@ const loading = ref(true)
 const currentUser = ref(null)
 const isUserVerified = ref(false) 
 const userRole = ref('buyer') 
+let localRealtimeChannel = null
 
 const currentView = ref('feed')
 const activeCategory = ref('All')
@@ -144,6 +150,13 @@ onMounted(async () => {
       isUserVerified.value = profileData.is_verified === true
       userRole.value = profileData.role
     }
+
+    localRealtimeChannel = supabase.channel('shop_auth_alerts')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${currentUser.value.id}` }, (payload) => {
+        if (payload.new.is_verified && !isUserVerified.value) {
+          window.location.reload();
+        }
+      }).subscribe()
   }
 
   savedItemIds.value = JSON.parse(localStorage.getItem('num_bazaar_saved') || '[]')
@@ -178,6 +191,8 @@ onMounted(async () => {
   loading.value = false
 })
 
+onUnmounted(() => { if (localRealtimeChannel) supabase.removeChannel(localRealtimeChannel) })
+
 const toggleSaved = (id) => {
   if (savedItemIds.value.includes(id)) savedItemIds.value = savedItemIds.value.filter(itemId => itemId !== id)
   else savedItemIds.value.push(id)
@@ -186,6 +201,7 @@ const toggleSaved = (id) => {
 
 const displayedProducts = computed(() => {
   let filtered = products.value
+  
   if (currentView.value === 'listings') filtered = filtered.filter(p => p.seller_id === currentUser.value?.id)
   else if (currentView.value === 'saved') filtered = filtered.filter(p => savedItemIds.value.includes(p.id))
 

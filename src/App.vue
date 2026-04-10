@@ -169,8 +169,16 @@ const updateCartCount = () => {
 }
 
 const fetchRoleAndAlerts = async (userId) => {
-  const { data } = await supabase.from('profiles').select('role').eq('id', userId).single()
+  const { data } = await supabase.from('profiles').select('role, status').eq('id', userId).single()
+  
   if (data) {
+    // KILL SWITCH: Auto-Logout if banned or deleted
+    if (data.status === 'banned' || data.status === 'deleted') {
+      alert("Your account access has been revoked. Please contact support.");
+      await handleSignOut();
+      return;
+    }
+
     userRole.value = data.role
     if (data.role === 'admin') {
       const { count: kycCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).not('id_card_url', 'is', null).eq('is_verified', false)
@@ -194,6 +202,13 @@ onMounted(async () => {
     globalRealtimeChannel = supabase.channel('global_alerts')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'in_app_notifications', filter: `user_id=eq.${session.user.id}` }, () => {
         bellCount.value++
+      })
+      // REALTIME KILL SWITCH LISTENER
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${session.user.id}` }, (payload) => {
+        if (payload.new.status === 'banned' || payload.new.status === 'deleted') {
+          alert("Session Terminated: Your account access has been revoked by the Administrator.");
+          handleSignOut();
+        }
       })
 
     if (userRole.value === 'admin') {
@@ -230,6 +245,7 @@ onUnmounted(() => { if (globalRealtimeChannel) supabase.removeChannel(globalReal
 const handleSignOut = async () => {
   await supabase.auth.signOut()
   localStorage.removeItem('num_bazaar_cart')
+  router.push('/auth')
 }
 </script>
 
