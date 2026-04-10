@@ -119,9 +119,24 @@
                   </div>
 
                   <div class="col-12">
-                    <label class="form-label small fw-bold text-dark">Product Image</label>
-                    <input type="file" @change="e => productImageFile = e.target.files[0]" class="form-control" accept="image/*" style="background-color: #e9ecef; border: none; border-radius: 12px; padding: 10px 15px; font-weight: 500;" required>
+                    <label class="form-label small fw-bold text-dark">Product Images (Up to 5)</label>
+                    <div class="p-3 bg-light rounded-4 border text-center position-relative" style="border-style: dashed !important; border-width: 2px !important;">
+                      <i class="bi bi-cloud-arrow-up-fill fs-2 text-secondary mb-1 d-block"></i>
+                      <p class="fw-bold text-dark small mb-0">Click to upload images</p>
+                      <input type="file" multiple accept="image/*" @change="handleFileSelect" class="position-absolute top-0 start-0 w-100 h-100 opacity-0" style="cursor: pointer;" required>
+                    </div>
+                    
+                    <div v-if="imagePreviews.length > 0" class="d-flex gap-2 mt-3 overflow-auto pb-2">
+                      <div v-for="(img, index) in imagePreviews" :key="index" class="position-relative">
+                        <img :src="img" class="rounded-3 object-fit-cover border" style="width: 70px; height: 70px;">
+                        <button type="button" @click.prevent="removeImage(index)" class="btn btn-danger btn-sm position-absolute top-0 end-0 translate-middle rounded-circle p-0 d-flex justify-content-center align-items-center" style="width: 20px; height: 20px;">
+                          <i class="bi bi-x" style="font-size: 0.8rem;"></i>
+                        </button>
+                        <span v-if="index === 0" class="position-absolute bottom-0 start-50 translate-middle-x badge bg-dark w-100" style="font-size: 0.55rem; border-radius: 0 0 8px 8px;">COVER</span>
+                      </div>
+                    </div>
                   </div>
+
                 </div>
 
                 <div class="mt-4 text-end">
@@ -162,9 +177,14 @@
                   <input v-if="withdrawForm.bankName === 'Other'" type="text" v-model="withdrawForm.customBankName" class="form-control" placeholder="Type your bank name" style="background-color: #e9ecef; border: 1px solid #dee2e6; border-radius: 12px; padding: 10px 15px; font-weight: 500;" required>
                 </div>
                 
-                <div class="mb-4">
+                <div class="mb-3">
                   <label class="form-label small fw-bold text-dark">10-Digit Account Number</label>
                   <input type="text" v-model="withdrawForm.accountNumber" class="form-control" style="background-color: #e9ecef; border: none; border-radius: 12px; padding: 12px 15px; font-weight: 500;" maxlength="10" required>
+                </div>
+                
+                <div class="mb-4">
+                  <label class="form-label small fw-bold text-dark">Account Name</label>
+                  <input type="text" v-model="withdrawForm.accountName" class="form-control" placeholder="John Doe" style="background-color: #e9ecef; border: none; border-radius: 12px; padding: 12px 15px; font-weight: 500;" required>
                 </div>
                 
                 <button type="submit" class="btn w-100 fw-bold py-3 rounded-pill shadow-sm" style="background-color: #10b981; color: white;" :disabled="isWithdrawing || profile.wallet_balance <= 0">
@@ -188,6 +208,8 @@ import { ref, onMounted, computed } from 'vue'
 import { supabase } from '../lib/supabaseClient'
 import { useRouter } from 'vue-router'
 
+const ADMIN_WA_NUMBER = '2348133874904' // Global Admin WhatsApp
+
 const router = useRouter()
 const currentUser = ref(null)
 const profile = ref(null)
@@ -197,16 +219,12 @@ const isProcessing = ref(false)
 const isWithdrawing = ref(false)
 const isPosting = ref(false)
 
-// Added customBankName to track manual inputs
-const withdrawForm = ref({ amount: '', bankName: '', customBankName: '', accountNumber: '' })
+const withdrawForm = ref({ amount: '', bankName: '', customBankName: '', accountNumber: '', accountName: '' })
 
-// Added customCategory to track manual inputs
-const newProduct = ref({
-  title: '', price: '', category: 'Electronics & Tech', customCategory: '', condition: 'New', stock: 1, description: ''
-})
-const productImageFile = ref(null)
+const selectedFiles = ref([])
+const imagePreviews = ref([])
+const newProduct = ref({ title: '', price: '', category: 'Electronics & Tech', customCategory: '', condition: 'New', stock: 1, description: '' })
 
-// Computed property to check if the 30-day MRR subscription is valid
 const hasActiveSubscription = computed(() => {
   if (!profile.value || !profile.value.subscription_ends_at) return false;
   return new Date(profile.value.subscription_ends_at) > new Date();
@@ -218,14 +236,7 @@ onMounted(async () => {
   
   if (sessionData.session) {
     currentUser.value = sessionData.session.user
-    
-    // Fetch profile to check subscription & balances
-    const { data: userProfile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', currentUser.value.id)
-      .single()
-      
+    const { data: userProfile } = await supabase.from('profiles').select('*').eq('id', currentUser.value.id).single()
     profile.value = userProfile
   } else {
     router.push('/auth')
@@ -233,177 +244,131 @@ onMounted(async () => {
   isLoading.value = false
 })
 
-// ==========================================
-// 1. POST NEW PRODUCT LOGIC
-// ==========================================
-const submitProduct = async () => {
-  if (!productImageFile.value) return alert("Please select an image for your product.");
+const handleFileSelect = (event) => {
+  const files = Array.from(event.target.files)
+  if (files.length + selectedFiles.value.length > 5) return alert("You can only upload a maximum of 5 images per product.")
   
-  // Resolve which category to use based on selection
-  const finalCategory = newProduct.value.category === 'Other' 
-    ? newProduct.value.customCategory 
-    : newProduct.value.category;
+  files.forEach(file => {
+    selectedFiles.value.push(file)
+    const reader = new FileReader()
+    reader.onload = (e) => imagePreviews.value.push(e.target.result)
+    reader.readAsDataURL(file)
+  })
+}
 
+const removeImage = (index) => {
+  selectedFiles.value.splice(index, 1)
+  imagePreviews.value.splice(index, 1)
+}
+
+const submitProduct = async () => {
+  if (selectedFiles.value.length === 0) return alert("Please upload at least one image.");
+  const finalCategory = newProduct.value.category === 'Other' ? newProduct.value.customCategory : newProduct.value.category;
   if (!finalCategory.trim()) return alert("Please specify your custom category.");
 
   isPosting.value = true;
   try {
-    // 1. Upload Image to Supabase Storage bucket
-    const fileExt = productImageFile.value.name.split('.').pop()
-    const fileName = `product_${currentUser.value.id}_${Date.now()}.${fileExt}`
-    
-    const { error: uploadError } = await supabase.storage
-      .from('product-images')
-      .upload(fileName, productImageFile.value)
-      
-    if (uploadError) throw new Error("Image upload failed: " + uploadError.message)
+    let uploadedUrls = []
+    for (const file of selectedFiles.value) {
+      const fileExt = file.name.split('.').pop()
+      const fileName = `product_${currentUser.value.id}_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
+      const { error: uploadError } = await supabase.storage.from('product-images').upload(fileName, file)
+      if (uploadError) throw new Error(`Image upload failed: ${uploadError.message}`)
+      const { data: publicUrlData } = supabase.storage.from('product-images').getPublicUrl(fileName)
+      uploadedUrls.push(publicUrlData.publicUrl)
+    }
 
-    // Get the public URL for the image
-    const { data: publicUrlData } = supabase.storage.from('product-images').getPublicUrl(fileName)
-
-    // 2. Insert into the Database with the dynamically resolved category
     const { error: dbError } = await supabase.from('products').insert([{
       seller_id: currentUser.value.id,
       title: newProduct.value.title,
       description: newProduct.value.description,
       price: newProduct.value.price,
-      category: finalCategory, // <-- Using the custom or default category
+      category: finalCategory,
       condition: newProduct.value.condition,
       stock: newProduct.value.stock,
-      image_urls: [publicUrlData.publicUrl],
-      is_approved: false // Sends it to Admin Command Center
+      image_urls: uploadedUrls,
+      is_approved: false
     }])
 
     if (dbError) throw new Error("Failed to post product: " + dbError.message)
 
-    alert("Success! Your product has been submitted and is pending Admin approval.")
+    alert("Product submitted! Sending notification to Admin...")
     
-    // Reset Form
+    const msg = `Hello Admin, I just uploaded a new product titled *${newProduct.value.title}* for approval. \n\nMy username is @${profile.value.username}.`;
+    window.open(`https://wa.me/${ADMIN_WA_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
+    
     newProduct.value = { title: '', price: '', category: 'Electronics & Tech', customCategory: '', condition: 'New', stock: 1, description: '' }
-    productImageFile.value = null
+    selectedFiles.value = []
+    imagePreviews.value = []
     
-  } catch (error) {
-    console.error("Posting Error:", error)
-    alert(error.message)
-  } finally {
-    isPosting.value = false
-  }
+  } catch (error) { alert(error.message) } finally { isPosting.value = false }
 }
 
-// ==========================================
-// 2. 30-DAY MRR PAYSTACK SUBSCRIPTION
-// ==========================================
 const processSubscription = () => {
   isProcessing.value = true; 
-
-  if (window.PaystackPop) {
-    launchPaystack();
-    return;
-  }
-
+  if (window.PaystackPop) return launchPaystack();
   const script = document.createElement('script');
   script.src = "https://js.paystack.co/v1/inline.js";
   script.async = true;
   script.onload = () => launchPaystack();
-  script.onerror = () => {
-    alert("Failed to load secure payment gateway. Please check your internet connection.");
-    isProcessing.value = false;
-  };
+  script.onerror = () => { alert("Failed to load secure payment gateway."); isProcessing.value = false; };
   document.body.appendChild(script);
 };
 
-// Extracted the database logic into its own safe async function
 const verifyAndSaveSubscription = async (reference) => {
   alert('Subscription Successful! Ref: ' + reference);
   try {
-    // Calculate the date 30 days from right now
     const expiryDate = new Date();
     expiryDate.setDate(expiryDate.getDate() + 30);
-
-    await supabase.from('profiles')
-      .update({ subscription_ends_at: expiryDate.toISOString() })
-      .eq('id', currentUser.value.id);
-      
+    await supabase.from('profiles').update({ subscription_ends_at: expiryDate.toISOString() }).eq('id', currentUser.value.id);
     window.location.reload();
-  } catch(err) {
-    console.error("Database update failed:", err);
-    alert("Payment was successful, but we couldn't update your profile. Please contact support.");
-    isProcessing.value = false;
-  }
+  } catch(err) { alert("Payment was successful, but we couldn't update your profile."); isProcessing.value = false; }
 };
 
 const launchPaystack = () => {
   const handler = window.PaystackPop.setup({
-    key: 'pk_test_a0b5c88d08fa86e6223c9ca4a32015e98cee0cc4', // <-- REPLACE WITH YOUR KEY
+    key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY, 
     email: currentUser.value.email,
-    amount: 2000 * 100, // ₦2,000 in kobo
+    amount: 2000 * 100, 
     currency: 'NGN',
-    callback: function(response) {
-      verifyAndSaveSubscription(response.reference);
-    },
-    onClose: function() {
-      alert('Transaction window was closed.');
-      isProcessing.value = false; 
-    }
+    callback: function(response) { verifyAndSaveSubscription(response.reference); },
+    onClose: function() { isProcessing.value = false; }
   });
   handler.openIframe();
 };
 
-// ==========================================
-// 3. MANUAL WITHDRAWAL LOGIC
-// ==========================================
 const requestWithdrawal = async () => {
-  if (withdrawForm.value.amount > profile.value.wallet_balance) {
-    return alert("You cannot withdraw more than your available balance.");
-  }
-  if (withdrawForm.value.amount < 100) {
-    return alert("Minimum withdrawal amount is ₦100.");
-  }
+  if (withdrawForm.value.amount > profile.value.wallet_balance) return alert("You cannot withdraw more than your available balance.");
+  if (withdrawForm.value.amount < 100) return alert("Minimum withdrawal amount is ₦100.");
 
-  // Resolve which Bank Name to use based on selection
-  const finalBankName = withdrawForm.value.bankName === 'Other' 
-    ? withdrawForm.value.customBankName 
-    : withdrawForm.value.bankName;
-
+  const finalBankName = withdrawForm.value.bankName === 'Other' ? withdrawForm.value.customBankName : withdrawForm.value.bankName;
   if (!finalBankName.trim()) return alert("Please specify your bank name.");
+  if (!withdrawForm.value.accountName.trim()) return alert("Please provide your account name.");
 
   isWithdrawing.value = true;
-  
   try {
     const newBalance = Number(profile.value.wallet_balance) - Number(withdrawForm.value.amount);
-    
-    // 1. Deduct funds instantly
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({ wallet_balance: newBalance })
-      .eq('id', currentUser.value.id);
-
+    const { error: updateError } = await supabase.from('profiles').update({ wallet_balance: newBalance }).eq('id', currentUser.value.id);
     if (updateError) throw updateError;
 
-    // 2. Create a pending transaction for the Admin
-    const { error: txError } = await supabase
-      .from('transactions')
-      .insert([{
-        profile_id: currentUser.value.id,
-        amount: withdrawForm.value.amount,
-        type: 'debit',
-        status: 'Pending',
-        // Using the dynamically resolved Bank Name
-        description: `Manual Payout - ${finalBankName} (${withdrawForm.value.accountNumber})`
-      }]);
+    const { error: txError } = await supabase.from('transactions').insert([{
+      profile_id: currentUser.value.id,
+      amount: withdrawForm.value.amount,
+      type: 'debit',
+      status: 'Pending',
+      description: `Manual Payout - ${finalBankName} | Acct: ${withdrawForm.value.accountNumber} | Name: ${withdrawForm.value.accountName}`
+    }]);
 
     if (txError) throw txError;
-
-    alert("Withdrawal requested successfully! The Admin team will review and process your transfer shortly.");
+    
+    alert("Withdrawal requested successfully! Notifying Admin...");
+    
+    const msg = `Hello Admin, I have requested a payout of *₦${withdrawForm.value.amount}* to ${finalBankName} (${withdrawForm.value.accountNumber} - ${withdrawForm.value.accountName}). \n\nMy username is @${profile.value.username}.`;
+    window.open(`https://wa.me/${ADMIN_WA_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
+    
     profile.value.wallet_balance = newBalance;
-    withdrawForm.value = { amount: '', bankName: '', customBankName: '', accountNumber: '' };
-
-  } catch (error) {
-    console.error("Payout Error:", error);
-    alert("Withdrawal request failed: " + error.message);
-  } finally {
-    isWithdrawing.value = false;
-  }
+    withdrawForm.value = { amount: '', bankName: '', customBankName: '', accountNumber: '', accountName: '' };
+  } catch (error) { alert("Withdrawal request failed: " + error.message); } finally { isWithdrawing.value = false; }
 };
 </script>
 

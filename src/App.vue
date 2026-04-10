@@ -13,25 +13,24 @@
           <router-link to="/shop" class="nav-link-stitch" active-class="nav-active">Feed</router-link>
           <router-link to="/dashboard" class="nav-link-stitch" active-class="nav-active" v-if="['seller', 'admin'].includes(userRole)">Post</router-link>
           <router-link :to="`/profile/${currentUser.id}`" class="nav-link-stitch" active-class="nav-active">Profile</router-link>
-          <router-link to="/messages" class="nav-link-stitch" active-class="nav-active">Messages</router-link>
           <router-link to="/cart" class="nav-link-stitch" active-class="nav-active">Cart</router-link>
           <router-link to="/about" class="nav-link-stitch" active-class="nav-active">About</router-link>
           
           <router-link v-if="userRole === 'admin'" to="/admin" class="nav-link-stitch text-warning fw-bold position-relative" active-class="nav-active" style="letter-spacing: 0.05em;">
             <i class="bi bi-shield-lock-fill me-1"></i> Admin
-            <span v-if="adminAlerts > 0" class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"></span>
+            <span v-if="adminAlerts > 0" class="position-absolute translate-middle badge rounded-pill shadow-sm" style="background-color: #b22b1d; top: 0px; left: 100%; font-size: 0.6rem; color: white; padding: 3px 6px;">{{ adminAlerts }}</span>
           </router-link>
         </div>
         
         <div class="d-flex align-items-center gap-4">
           <router-link to="/notifications" class="text-white position-relative text-decoration-none">
             <i class="bi bi-bell-fill fs-5"></i>
-            <span v-if="bellCount > 0" class="position-absolute translate-middle badge rounded-pill" style="background-color: #b22b1d; top: 0px; left: 15px; font-size: 0.6rem; color: white;">{{ bellCount }}</span>
+            <span v-if="bellCount > 0" class="position-absolute translate-middle badge rounded-pill shadow-sm" style="background-color: #b22b1d; top: 0px; left: 15px; font-size: 0.6rem; color: white;">{{ bellCount }}</span>
           </router-link>
 
           <router-link to="/cart" class="text-white position-relative text-decoration-none">
             <i class="bi bi-cart3 fs-5"></i>
-            <span v-if="cartCount > 0" class="position-absolute translate-middle badge rounded-pill" style="background-color: #b22b1d; top: 0px; left: 15px; font-size: 0.6rem; color: white;">{{ cartCount }}</span>
+            <span v-if="cartCount > 0" class="position-absolute translate-middle badge rounded-pill shadow-sm" style="background-color: #b22b1d; top: 0px; left: 15px; font-size: 0.6rem; color: white;">{{ cartCount }}</span>
           </router-link>
           
           <div class="d-flex align-items-center gap-3 border-start ps-4" style="border-color: rgba(255,255,255,0.2) !important;">
@@ -58,7 +57,7 @@
         <div class="d-flex align-items-center gap-3">
           <router-link to="/notifications" class="text-white text-decoration-none position-relative me-2">
             <i class="bi bi-bell-fill fs-5"></i>
-            <span v-if="bellCount > 0" class="position-absolute translate-middle badge rounded-pill" style="background-color: #b22b1d; top: 0px; left: 15px; font-size: 0.5rem; color: white; padding: 3px 5px;">{{ bellCount }}</span>
+            <span v-if="bellCount > 0" class="position-absolute translate-middle badge rounded-pill shadow-sm" style="background-color: #b22b1d; top: 0px; left: 15px; font-size: 0.5rem; color: white; padding: 3px 5px;">{{ bellCount }}</span>
           </router-link>
           
           <button @click="handleSignOut" class="btn btn-sm text-white-50 p-0 border-0" title="Sign Out">
@@ -78,7 +77,7 @@
         <router-link to="/cart" class="nav-item text-center text-decoration-none position-relative" active-class="active-bottom-tab" style="color: #6b7280; flex: 1;">
           <i class="bi bi-cart-fill fs-4 d-block mb-1"></i>
           <span class="d-block fw-bold text-uppercase" style="font-size: 0.6rem; letter-spacing: 0.05em;">Cart</span>
-          <span v-if="cartCount > 0" class="position-absolute badge rounded-pill" style="background-color: #b22b1d; color: white; top: -2px; right: 15px; font-size: 0.6rem;">{{ cartCount }}</span>
+          <span v-if="cartCount > 0" class="position-absolute badge rounded-pill shadow-sm" style="background-color: #b22b1d; color: white; top: -2px; right: 15px; font-size: 0.6rem;">{{ cartCount }}</span>
         </router-link>
 
         <router-link v-if="['seller', 'admin'].includes(userRole)" to="/dashboard" class="nav-item text-center text-decoration-none" active-class="active-bottom-tab" style="color: #6b7280; flex: 1;">
@@ -86,14 +85,9 @@
           <span class="d-block fw-bold text-uppercase" style="font-size: 0.6rem; letter-spacing: 0.05em;">Post</span>
         </router-link>
 
-        <router-link to="/messages" class="nav-item text-center text-decoration-none" active-class="active-bottom-tab" style="color: #6b7280; flex: 1;">
-          <i class="bi bi-chat-dots-fill fs-4 d-block mb-1"></i>
-          <span class="d-block fw-bold text-uppercase" style="font-size: 0.6rem; letter-spacing: 0.05em;">Chat</span>
-        </router-link>
-
         <router-link v-if="userRole === 'admin'" to="/admin" class="nav-item text-center text-decoration-none position-relative" active-class="active-bottom-tab" style="color: #6b7280; flex: 1;">
           <i class="bi bi-shield-lock-fill fs-4 d-block mb-1"></i>
-          <span v-if="adminAlerts > 0" class="position-absolute p-1 bg-danger border border-light rounded-circle" style="top: 5px; right: 20px;"></span>
+          <span v-if="adminAlerts > 0" class="position-absolute badge rounded-pill shadow-sm" style="background-color: #b22b1d; color: white; top: -2px; right: 15px; font-size: 0.6rem;">{{ adminAlerts }}</span>
           <span class="d-block fw-bold text-uppercase" style="font-size: 0.6rem; letter-spacing: 0.05em;">Admin</span>
         </router-link>
 
@@ -155,7 +149,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { supabase } from './lib/supabaseClient'
 import { useRouter } from 'vue-router'
 
@@ -165,6 +159,7 @@ const userRole = ref('buyer')
 const cartCount = ref(0)
 const adminAlerts = ref(0)
 const bellCount = ref(0) 
+let globalRealtimeChannel = null
 
 const updateCartCount = () => {
   try {
@@ -181,7 +176,8 @@ const fetchRoleAndAlerts = async (userId) => {
       const { count: kycCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).not('id_card_url', 'is', null).eq('is_verified', false)
       const { count: ticketCount } = await supabase.from('tickets').select('*', { count: 'exact', head: true }).eq('status', 'open')
       const { count: payoutCount } = await supabase.from('transactions').select('*', { count: 'exact', head: true }).eq('type', 'debit').eq('status', 'Pending')
-      adminAlerts.value = (kycCount || 0) + (ticketCount || 0) + (payoutCount || 0)
+      const { count: productCount } = await supabase.from('products').select('*', { count: 'exact', head: true }).eq('is_approved', false)
+      adminAlerts.value = (kycCount || 0) + (ticketCount || 0) + (payoutCount || 0) + (productCount || 0)
     }
   }
 
@@ -194,11 +190,27 @@ onMounted(async () => {
   if (session) {
     currentUser.value = session.user
     await fetchRoleAndAlerts(session.user.id)
+
+    globalRealtimeChannel = supabase.channel('global_alerts')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'in_app_notifications', filter: `user_id=eq.${session.user.id}` }, () => {
+        bellCount.value++
+      })
+
+    if (userRole.value === 'admin') {
+      globalRealtimeChannel
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => fetchRoleAndAlerts(session.user.id))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, () => fetchRoleAndAlerts(session.user.id))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => fetchRoleAndAlerts(session.user.id))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => fetchRoleAndAlerts(session.user.id))
+    }
+    globalRealtimeChannel.subscribe()
   }
   
   updateCartCount()
   window.addEventListener('storage', updateCartCount)
   window.addEventListener('notifications_read', () => { bellCount.value = 0 })
+  window.addEventListener('notification_read_single', () => { if (bellCount.value > 0) bellCount.value-- })
+  window.addEventListener('admin_action_completed', () => { if (currentUser.value && userRole.value === 'admin') fetchRoleAndAlerts(currentUser.value.id) })
   
   supabase.auth.onAuthStateChange(async (event, session) => {
     currentUser.value = session?.user || null
@@ -213,6 +225,8 @@ onMounted(async () => {
   })
 })
 
+onUnmounted(() => { if (globalRealtimeChannel) supabase.removeChannel(globalRealtimeChannel) })
+
 const handleSignOut = async () => {
   await supabase.auth.signOut()
   localStorage.removeItem('num_bazaar_cart')
@@ -220,48 +234,13 @@ const handleSignOut = async () => {
 </script>
 
 <style scoped>
-.nav-link-stitch {
-  color: rgba(255, 255, 255, 0.7);
-  font-weight: 500;
-  font-size: 0.95rem;
-  text-decoration: none;
-  transition: color 0.2s;
-  padding-bottom: 2px;
-}
-
+.nav-link-stitch { color: rgba(255, 255, 255, 0.7); font-weight: 500; font-size: 0.95rem; text-decoration: none; transition: color 0.2s; padding-bottom: 2px; }
 .nav-link-stitch:hover { color: #ffffff; }
 .nav-active { color: #ffffff !important; font-weight: 700; border-bottom: 2px solid #ffffff; }
 .nav-item { transition: transform 0.2s ease, color 0.2s ease; }
 .active-bottom-tab { color: #082b59 !important; transform: translateY(-2px); }
-
-.signout-btn:hover {
-  background-color: rgba(255,255,255,0.2) !important;
-  color: white !important;
-}
-
-.support-fab {
-  position: fixed;
-  width: 60px;
-  height: 60px;
-  background-color: #b22b1d;
-  color: white;
-  right: 25px;
-  bottom: 25px;
-  z-index: 1040;
-  transition: transform 0.2s ease;
-  border: none;
-}
+.signout-btn:hover { background-color: rgba(255,255,255,0.2) !important; color: white !important; }
+.support-fab { position: fixed; width: 60px; height: 60px; background-color: #b22b1d; color: white; right: 25px; bottom: 25px; z-index: 1040; transition: transform 0.2s ease; border: none; }
 .support-fab:hover { transform: scale(1.08); }
-
-@media (max-width: 991px) {
-  .support-fab {
-    bottom: 95px; 
-    right: 20px;
-    width: 55px;
-    height: 55px;
-  }
-  .global-footer {
-    padding-bottom: 90px !important;
-  }
-}
+@media (max-width: 991px) { .support-fab { bottom: 95px; right: 20px; width: 55px; height: 55px; } .global-footer { padding-bottom: 90px !important; } }
 </style>

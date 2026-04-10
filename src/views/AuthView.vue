@@ -47,6 +47,15 @@
             </div>
           </div>
 
+          <div v-if="!isLogin" class="mb-3">
+            <label class="form-label small fw-bold text-uppercase text-dark" style="letter-spacing: 0.05em;">WhatsApp Number <span class="text-danger">*</span></label>
+            <div class="position-relative">
+              <input type="tel" v-model="phoneNumber" class="form-control w-100" placeholder="080..." style="background-color: #e9ecef; border: none; border-radius: 12px; padding: 14px 20px; font-weight: 500; color: #111827;" :required="!isLogin">
+              <i class="bi bi-whatsapp position-absolute top-50 end-0 translate-middle-y me-3 text-success fs-5"></i>
+            </div>
+            <small class="text-secondary" style="font-size: 0.7rem;">Required for delivery and admin notifications.</small>
+          </div>
+
           <div v-if="!isLogin" class="row g-3 mb-3">
             <div class="col-6">
               <label class="form-label small fw-bold text-uppercase text-dark" style="letter-spacing: 0.05em;">Account Type</label>
@@ -124,6 +133,7 @@ const password = ref('')
 const firstName = ref('')
 const lastName = ref('')
 const username = ref('')
+const phoneNumber = ref('')
 const accountType = ref('buyer') 
 const affiliation = ref('Student')
 const isEnt211 = ref(false)
@@ -141,32 +151,30 @@ const handleAuth = async () => {
       router.push('/shop')
     } else {
       
-      // 1. Create Auth User
       const { data: authData, error: authError } = await supabase.auth.signUp({ 
         email: email.value, 
         password: password.value 
       })
       if (authError) throw authError
 
-      // 2. Logic for 3-Months Free (ENT211)
       let freeSubscriptionEnd = null;
       if (isEnt211.value && accountType.value === 'seller') {
         const expiryDate = new Date();
-        expiryDate.setDate(expiryDate.getDate() + 90); // Add 90 days
+        expiryDate.setDate(expiryDate.getDate() + 90); 
         freeSubscriptionEnd = expiryDate.toISOString();
       }
 
-      // 3. EXPLICITLY CREATE DATABASE PROFILE
       if (authData?.user) {
         const { error: profileError } = await supabase.from('profiles').insert([{
           id: authData.user.id,
           first_name: firstName.value,
           last_name: lastName.value,
           username: username.value,
+          phone_number: phoneNumber.value, // Saving WhatsApp number to DB
           role: accountType.value,
           campus_affiliation: affiliation.value,
           is_ent211: isEnt211.value,
-          subscription_ends_at: freeSubscriptionEnd, // Grants the 3 months if applicable
+          subscription_ends_at: freeSubscriptionEnd, 
           business_name: ['seller', 'external'].includes(accountType.value) ? `${firstName.value}'s Store` : null
         }])
         

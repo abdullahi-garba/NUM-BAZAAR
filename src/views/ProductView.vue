@@ -17,15 +17,30 @@
         
         <div class="col-lg-6">
           <div class="bg-white p-2 shadow-sm rounded-4 border" style="border-color: rgba(0,0,0,0.05);">
-            <img :src="product.image_urls?.[0] || 'https://via.placeholder.com/600'" class="w-100 object-fit-cover rounded-3" style="height: 450px;">
+            <img :src="product.image_urls?.[activeImageIndex] || 'https://via.placeholder.com/600'" class="w-100 object-fit-cover rounded-3 mb-2" style="height: 450px; transition: opacity 0.3s ease;">
+            
+            <div v-if="product.image_urls?.length > 1" class="d-flex gap-2 overflow-auto pb-1" style="-ms-overflow-style: none; scrollbar-width: none;">
+              <img v-for="(img, idx) in product.image_urls" :key="idx" 
+                   :src="img" 
+                   @click="activeImageIndex = idx" 
+                   class="rounded-3 object-fit-cover border" 
+                   :class="activeImageIndex === idx ? 'border-primary border-2 opacity-100' : 'border-light opacity-50'" 
+                   style="width: 80px; height: 80px; cursor: pointer; transition: all 0.2s ease;">
+            </div>
           </div>
         </div>
 
-        <div class="col-lg-6">
-          <div class="mb-2 d-flex align-items-center gap-2">
-            <span class="badge bg-white text-dark border border-secondary shadow-sm px-3 py-2 text-uppercase" style="letter-spacing: 0.05em; font-size: 0.7rem;">{{ product.category || 'General' }}</span>
-            <span v-if="avgRating > 0" class="badge bg-warning text-dark px-3 py-2 fw-bold d-flex align-items-center" style="font-size: 0.8rem;">
-              <i class="bi bi-star-fill me-1"></i> {{ avgRating }} ({{ reviews.length }} Reviews)
+        <div class="col-lg-6 d-flex flex-column">
+          <div class="mb-2 d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+              <span class="badge bg-white text-dark border border-secondary shadow-sm px-3 py-2 text-uppercase" style="letter-spacing: 0.05em; font-size: 0.7rem;">{{ product.category || 'General' }}</span>
+              <span v-if="avgRating > 0" class="badge bg-warning text-dark px-3 py-2 fw-bold d-flex align-items-center" style="font-size: 0.8rem;">
+                <i class="bi bi-star-fill me-1"></i> {{ avgRating }} ({{ reviews.length }} Reviews)
+              </span>
+            </div>
+            
+            <span class="badge px-3 py-2 text-uppercase fw-bold shadow-sm" :class="product.stock > 0 ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-dark text-white'">
+              {{ product.stock > 0 ? `In Stock: ${product.stock}` : 'Sold Out' }}
             </span>
           </div>
 
@@ -37,7 +52,7 @@
 
           <div class="mb-4">
             <h6 class="fw-bold text-dark text-uppercase small mb-2" style="letter-spacing: 0.05em;">Description</h6>
-            <p class="text-secondary fw-medium" style="line-height: 1.7; font-size: 1.05rem;">
+            <p class="text-secondary fw-medium" style="line-height: 1.7; font-size: 1.05rem; white-space: pre-wrap;">
               {{ product.description || 'No description provided.' }}
             </p>
           </div>
@@ -53,17 +68,40 @@
             <button @click="router.push(`/profile/${product.seller_id}`)" class="btn btn-sm btn-outline-dark rounded-pill fw-bold px-3">View Profile</button>
           </div>
 
-          <div class="d-flex gap-3">
-            <button @click="addToCart" class="btn flex-grow-1 fw-bold py-3 rounded-pill shadow-sm d-flex justify-content-center align-items-center gap-2" style="background-color: #082b59; color: white;" :disabled="product.stock <= 0 || product.seller_id === currentUser?.id">
-              <i class="bi bi-cart-plus-fill fs-5"></i> 
-              {{ product.seller_id === currentUser?.id ? "This is your item" : product.stock <= 0 ? "Sold Out" : "Add to Escrow Cart" }}
-            </button>
-            <button @click="router.push('/messages')" class="btn btn-light border fw-bold py-3 px-4 rounded-pill shadow-sm" :disabled="product.seller_id === currentUser?.id" title="Chat with Seller">
-              <i class="bi bi-chat-dots-fill text-dark fs-5"></i>
-            </button>
+          <div class="mt-auto">
+            <div v-if="product.stock > 0 && product.seller_id !== currentUser?.id">
+              <label class="form-label small fw-bold text-dark text-uppercase mb-2">Quantity</label>
+              
+              <div class="d-flex align-items-center gap-3 mb-4">
+                <div class="d-flex align-items-center bg-white rounded-pill border shadow-sm" style="padding: 4px;">
+                  <button @click="selectedQuantity > 1 ? selectedQuantity-- : null" class="btn btn-sm rounded-circle d-flex justify-content-center align-items-center bg-light" style="width: 35px; height: 35px; border: none;">
+                    <i class="bi bi-dash fw-bold text-dark"></i>
+                  </button>
+                  <span class="fw-bold px-4 text-dark">{{ selectedQuantity }}</span>
+                  <button @click="selectedQuantity < product.stock ? selectedQuantity++ : null" class="btn btn-sm rounded-circle d-flex justify-content-center align-items-center bg-light" style="width: 35px; height: 35px; border: none;">
+                    <i class="bi bi-plus fw-bold text-dark"></i>
+                  </button>
+                </div>
+
+                <button @click="addToCart" class="btn flex-grow-1 fw-bold py-3 rounded-pill shadow-sm d-flex justify-content-center align-items-center gap-2" style="background-color: #082b59; color: white; border: none;">
+                  <i class="bi bi-cart-plus-fill fs-5"></i> Add to Escrow
+                </button>
+              </div>
+
+              <button @click="showWhatsappModal = true" class="btn w-100 fw-bold rounded-pill py-3 d-flex justify-content-center align-items-center gap-2 shadow-sm" style="background-color: #25D366; color: white; border: none;">
+                <i class="bi bi-whatsapp fs-5"></i> Chat with Vendor
+              </button>
+            </div>
+
+            <div v-else>
+               <button class="btn w-100 fw-bold py-3 rounded-pill" style="background-color: #e9ecef; color: #6b7280; border: none;" disabled>
+                 <i class="bi bi-lock-fill me-2"></i>
+                 {{ product.seller_id === currentUser?.id ? "This is your item" : "Sold Out" }}
+               </button>
+            </div>
+            
+            <p class="small text-center text-secondary fw-medium mt-3"><i class="bi bi-shield-check text-success me-1"></i> Payment secured in Escrow until delivery.</p>
           </div>
-          
-          <p class="small text-center text-secondary fw-medium mt-3"><i class="bi bi-shield-check text-success me-1"></i> Payment secured in Escrow until delivery.</p>
 
         </div>
       </div>
@@ -110,11 +148,34 @@
               <p class="text-dark fw-medium mb-0 mt-2" style="font-size: 0.95rem;">"{{ review.comment }}"</p>
             </div>
           </div>
-
         </div>
       </div>
 
     </div>
+
+    <div v-if="showWhatsappModal" class="modal-backdrop" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1060; display: flex; justify-content: center; align-items: center;">
+      <div class="bg-white p-4 rounded-4 shadow-lg w-100" style="max-width: 400px; margin: 0 15px;">
+        <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+          <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-whatsapp text-success me-2"></i>Send Message</h5>
+          <button @click="showWhatsappModal = false" class="btn-close"></button>
+        </div>
+        
+        <p class="small text-secondary fw-medium mb-3">Select a quick response or type your own message to send directly to the vendor's WhatsApp.</p>
+        
+        <div class="d-flex flex-column gap-2 mb-3">
+          <button @click="whatsappTemplate = 'Is this item still available?'" class="btn btn-light border text-start small fw-medium rounded-3 py-2" :class="whatsappTemplate === 'Is this item still available?' ? 'border-success bg-success-subtle' : ''">Is this item still available?</button>
+          <button @click="whatsappTemplate = 'Can the price be negotiated?'" class="btn btn-light border text-start small fw-medium rounded-3 py-2" :class="whatsappTemplate === 'Can the price be negotiated?' ? 'border-success bg-success-subtle' : ''">Can the price be negotiated?</button>
+          <button @click="whatsappTemplate = 'custom'" class="btn btn-light border text-start small fw-medium rounded-3 py-2" :class="whatsappTemplate === 'custom' ? 'border-success bg-success-subtle' : ''">Custom Message...</button>
+        </div>
+
+        <textarea v-if="whatsappTemplate === 'custom'" v-model="customWhatsappText" class="form-control mb-3 bg-light border-0" rows="3" placeholder="Type your message..."></textarea>
+
+        <button @click="routeToWhatsapp" class="btn w-100 fw-bold rounded-pill py-2 shadow-sm" style="background-color: #25D366; color: white; border: none;">
+          Open WhatsApp <i class="bi bi-box-arrow-up-right ms-1"></i>
+        </button>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -131,7 +192,12 @@ const product = ref(null)
 const reviews = ref([])
 const currentUser = ref(null)
 
-// Review Form State
+const activeImageIndex = ref(0) // State for Image Gallery
+const selectedQuantity = ref(1)
+const showWhatsappModal = ref(false)
+const whatsappTemplate = ref('Is this item still available?')
+const customWhatsappText = ref('')
+
 const newReview = ref({ rating: 0, comment: '' })
 const isSubmittingReview = ref(false)
 
@@ -141,17 +207,15 @@ onMounted(async () => {
 
   const productId = route.params.id
 
-  // Fetch Product Data & Seller Info
   const { data: prodData } = await supabase
     .from('products')
-    .select('*, profiles(id, business_name, first_name, profile_image)')
+    .select('*, profiles(id, business_name, first_name, profile_image, phone_number)')
     .eq('id', productId)
     .single()
     
   product.value = prodData
 
   if (prodData) {
-    // Fetch Reviews for this product
     const { data: reviewData } = await supabase
       .from('reviews')
       .select('*, profiles(business_name, first_name)')
@@ -178,13 +242,13 @@ const addToCart = () => {
   }
   
   const currentCart = JSON.parse(localStorage.getItem('num_bazaar_cart') || '[]')
-  currentCart.push(product.value)
-  localStorage.setItem('num_bazaar_cart', JSON.stringify(currentCart))
+  // Push the product along with the precise quantity selected by the user
+  currentCart.push({ ...product.value, cartQuantity: selectedQuantity.value })
   
-  // Trigger event to update Navbar Cart Badge
+  localStorage.setItem('num_bazaar_cart', JSON.stringify(currentCart))
   window.dispatchEvent(new Event('storage'))
   
-  alert("Added to Escrow Cart!")
+  alert(`${selectedQuantity.value}x added to Escrow Cart!`)
   router.push('/cart')
 }
 
@@ -202,14 +266,29 @@ const submitReview = async () => {
 
     if (error) throw error
 
-    // Instantly add the new review to the UI list
     reviews.value.unshift(data)
-    newReview.value = { rating: 0, comment: '' } // reset form
+    newReview.value = { rating: 0, comment: '' } 
     
   } catch (error) {
     alert("Error posting review: " + error.message)
   } finally {
     isSubmittingReview.value = false
   }
+}
+
+const routeToWhatsapp = () => {
+  let phone = product.value?.profiles?.phone_number
+  if (!phone) return alert("This vendor has not provided a phone number on their profile.")
+  
+  let cleanPhone = phone.replace(/\D/g, '')
+  if (cleanPhone.startsWith('0')) cleanPhone = '234' + cleanPhone.slice(1)
+  if (cleanPhone.startsWith('+')) cleanPhone = cleanPhone.slice(1)
+
+  const messageText = whatsappTemplate.value === 'custom' ? customWhatsappText.value : whatsappTemplate.value;
+  const finalMessage = `Hello, I saw your item *${product.value.title}* on NUM BAZAAR. \n\n${messageText}`;
+
+  const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(finalMessage)}`;
+  window.open(waUrl, '_blank');
+  showWhatsappModal.value = false;
 }
 </script>

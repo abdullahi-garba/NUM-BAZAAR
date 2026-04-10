@@ -21,10 +21,11 @@
                 <div>
                   <h6 class="fw-bold mb-1 text-dark">{{ item.title }}</h6>
                   <span class="badge bg-light text-secondary border mb-2">{{ item.category }}</span>
+                  <div class="small fw-bold text-dark">Qty: {{ item.cartQuantity || 1 }}</div>
                 </div>
               </div>
               <div class="d-flex align-items-center justify-content-between w-100 w-md-auto gap-4">
-                <h5 class="fw-black text-danger mb-0">₦{{ Number(item.price).toLocaleString() }}</h5>
+                <h5 class="fw-black text-danger mb-0">₦{{ (Number(item.price) * (item.cartQuantity || 1)).toLocaleString() }}</h5>
                 <button @click="removeFromCart(index)" class="btn btn-outline-danger rounded-circle p-2 shadow-sm d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
                   <i class="bi bi-trash-fill"></i>
                 </button>
@@ -39,7 +40,7 @@
           <h5 class="fw-bold mb-4 border-bottom pb-3"><i class="bi bi-receipt me-2"></i>Order Summary</h5>
           
           <div class="d-flex justify-content-between mb-3">
-            <span class="text-muted fw-semibold">Subtotal ({{ cartItems.length }} items)</span>
+            <span class="text-muted fw-semibold">Subtotal</span>
             <span class="fw-bold text-dark">₦{{ cartTotal.toLocaleString() }}</span>
           </div>
 
@@ -54,7 +55,8 @@
           </div>
           
           <button @click="processCheckout" class="btn btn-primary btn-lg w-100 fw-bold rounded-pill shadow" :disabled="isProcessing" style="background-color: #082b59; border: none;">
-            <i class="bi" :class="isProcessing ? 'bi-hourglass-split' : 'bi-lock-fill'"></i>
+            <span v-if="isProcessing" class="spinner-border spinner-border-sm me-2"></span>
+            <i v-else class="bi bi-lock-fill me-2"></i>
             {{ isProcessing ? 'Processing...' : 'Secure Checkout' }}
           </button>
           
@@ -80,16 +82,12 @@ const isProcessing = ref(false)
 const currentUser = ref(null)
 
 const loadCart = () => {
-  try {
-    cartItems.value = JSON.parse(localStorage.getItem('num_bazaar_cart') || '[]')
-  } catch (e) {
-    cartItems.value = []
-  }
+  try { cartItems.value = JSON.parse(localStorage.getItem('num_bazaar_cart') || '[]') } 
+  catch (e) { cartItems.value = [] }
 }
 
-// Math for the checkout totals
 const cartTotal = computed(() => {
-  return cartItems.value.reduce((total, item) => total + Number(item.price), 0)
+  return cartItems.value.reduce((total, item) => total + (Number(item.price) * (item.cartQuantity || 1)), 0)
 })
 
 const platformFee = computed(() => {
@@ -108,23 +106,13 @@ const removeFromCart = (index) => {
 
 const processCheckout = async () => {
   const { data: sessionData } = await supabase.auth.getSession()
-  
-  if (!sessionData.session) {
-    alert("Security Check: You must be logged in to access the Escrow Checkout.")
-    return router.push('/auth')
-  }
+  if (!sessionData.session) return router.push('/auth')
   
   currentUser.value = sessionData.session.user
   isProcessing.value = true
 
   try {
-    if (!import.meta.env.VITE_PAYSTACK_PUBLIC_KEY) {
-      throw new Error("Missing VITE_PAYSTACK_PUBLIC_KEY in your .env file!")
-    }
-
     const userEmail = currentUser.value.email
-
-    // Dynamic Paystack Launcher
     const launchPaystack = () => {
       const handler = window.PaystackPop.setup({
         key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY, 
@@ -137,102 +125,89 @@ const processCheckout = async () => {
           
           const completeDatabaseUpdates = async () => {
             try {
-              // A. Create the Order Records in Escrow
+              // 1. Calculate and Insert Orders
               const ordersToInsert = cartItems.value.map(item => {
-                const itemFee = Math.round(Number(item.price) * 0.02);
-                const itemTotal = Number(item.price) + itemFee; 
+                const qty = item.cartQuantity || 1;
+                const basePriceTotal = Number(item.price) * qty;
+                const itemFee = Math.round(basePriceTotal * 0.02);
                 
                 return {
                   buyer_id: currentUser.value.id,
                   seller_id: item.seller_id,
                   product_id: item.id,
-                  product_name: item.title,
-                  product_price: item.price, 
+                  product_name: `${qty}x ${item.title}`,
+                  product_price: basePriceTotal, 
                   product_image: item.image_urls[0],
                   status: 'Paid (In Escrow)',
                   paystack_reference: response.reference,
                   platform_fee: itemFee,
-                  total_amount: itemTotal 
+                  total_amount: basePriceTotal + itemFee 
                 }
               })
               
-              const { error: orderError } = await supabase.from('orders').insert(ordersToInsert)
-              if (orderError) throw new Error("Order Insert Failed: " + orderError.message)
+              await supabase.from('orders').insert(ordersToInsert)
 
-              // B. INVENTORY & ESCROW ALGORITHM
+              // 2. Deplete Stock & Add Escrow Balance based on Qty Selected
               for (const item of cartItems.value) {
-                // 1. Deplete Stock
+                const qty = item.cartQuantity || 1;
                 const { data: currentProduct } = await supabase.from('products').select('stock').eq('id', item.id).single()
-                if (currentProduct && currentProduct.stock > 0) {
-                  const { error: stockErr } = await supabase.from('products').update({ stock: currentProduct.stock - 1 }).eq('id', item.id)
-                  if (stockErr) throw new Error("Stock Update Failed: " + stockErr.message)
+                if (currentProduct) {
+                  await supabase.from('products').update({ stock: Math.max(0, currentProduct.stock - qty) }).eq('id', item.id)
                 }
 
-                // 2. Update Seller's Escrow Balance
                 const { data: seller } = await supabase.from('profiles').select('escrow_balance').eq('id', item.seller_id).single()
                 if (seller) {
-                  const newEscrow = Number(seller.escrow_balance || 0) + Number(item.price)
-                  const { error: escrowErr } = await supabase.from('profiles').update({ escrow_balance: newEscrow }).eq('id', item.seller_id)
-                  if (escrowErr) throw new Error("Escrow Update Failed: " + escrowErr.message)
+                  const newEscrow = Number(seller.escrow_balance || 0) + (Number(item.price) * qty)
+                  await supabase.from('profiles').update({ escrow_balance: newEscrow }).eq('id', item.seller_id)
                 }
               }
 
-              // C. Clear the Cart securely
+              // 3. Prepare Auto-WhatsApp Redirect for the Primary Vendor
+              const primaryVendorPhone = cartItems.value[0]?.profiles?.phone_number;
+              const primaryItemTitle = cartItems.value[0]?.title;
+              
               localStorage.removeItem('num_bazaar_cart')
               cartItems.value = []
               window.dispatchEvent(new Event('storage'))
 
-              alert("Payment Successful! Your funds are securely locked in Escrow. Redirecting to your Profile...")
-              router.push(`/profile/${currentUser.value.id}`)
+              alert("Payment Successful! Routing you to the vendor's WhatsApp to coordinate delivery...")
+              
+              if (primaryVendorPhone) {
+                let cleanPhone = primaryVendorPhone.replace(/\D/g, '')
+                if (cleanPhone.startsWith('0')) cleanPhone = '234' + cleanPhone.slice(1)
+                if (cleanPhone.startsWith('+')) cleanPhone = cleanPhone.slice(1)
+                
+                const msg = `🧾 *NUM BAZAAR RECEIPT*\n\nHello, I have just secured the Escrow payment for: *${primaryItemTitle}*. \n\nRef: ${response.reference}\n\nWhen can we meet up for delivery?`
+                window.location.href = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`
+              } else {
+                router.push(`/profile/${currentUser.value.id}`)
+              }
               
             } catch (error) {
-              console.error("Database Error Post-Payment:", error)
               alert("Database Error: " + error.message)
             } finally {
               isProcessing.value = false
             }
           }
-
           completeDatabaseUpdates()
         },
-        onClose: function() {
-          isProcessing.value = false;
-        }
+        onClose: function() { isProcessing.value = false; }
       });
-
       handler.openIframe();
     };
 
-    // Check if script exists, otherwise load it dynamically
-    if (window.PaystackPop) {
-      launchPaystack();
-    } else {
+    if (window.PaystackPop) launchPaystack();
+    else {
       const script = document.createElement('script');
       script.src = "https://js.paystack.co/v1/inline.js";
       script.async = true;
       script.onload = () => launchPaystack();
-      script.onerror = () => {
-        alert("Failed to load secure payment gateway. Please check your internet connection.");
-        isProcessing.value = false;
-      };
+      script.onerror = () => { alert("Failed to load secure gateway."); isProcessing.value = false; };
       document.body.appendChild(script);
     }
-    
   } catch (error) {
-    console.error("Initialization Error:", error)
-    alert(`Checkout Error: ${error.message}`)
-    isProcessing.value = false
+    alert(`Checkout Error: ${error.message}`); isProcessing.value = false
   }
 }
-
 onMounted(() => loadCart())
 </script>
-
-<style scoped>
-.list-group-item {
-  transition: background-color 0.2s ease;
-}
-.list-group-item:hover {
-  background-color: #f8f9fa;
-}
-</style>

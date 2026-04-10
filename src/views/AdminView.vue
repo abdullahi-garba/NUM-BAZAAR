@@ -31,8 +31,8 @@
           <div class="p-4 bg-white shadow-sm" style="border-radius: 16px; border: 1px solid rgba(0,0,0,0.05); border-left: 4px solid #b22b1d;">
             <h6 class="text-secondary fw-bold text-uppercase mb-2">Pending Actions</h6>
             <h2 class="text-dark mb-0" style="font-weight: 900;">
-              {{ pendingWithdrawals.length + pendingKYC.length + openTicketsCount }} 
-              <span class="fs-6 text-danger ms-2 fw-bold" v-if="(pendingWithdrawals.length + pendingKYC.length + openTicketsCount) > 0">Action Required</span>
+              {{ pendingWithdrawals.length + pendingKYC.length + openTicketsCount + (allProducts.filter(p => !p.is_approved).length) }} 
+              <span class="fs-6 text-danger ms-2 fw-bold" v-if="(pendingWithdrawals.length + pendingKYC.length + openTicketsCount + (allProducts.filter(p => !p.is_approved).length)) > 0">Action Required</span>
             </h2>
           </div>
         </div>
@@ -41,12 +41,20 @@
       <div class="overflow-hidden bg-white shadow-sm mb-5" style="border-radius: 16px; border: 1px solid rgba(0,0,0,0.05);">
         
         <div class="d-flex overflow-auto border-bottom no-print" style="background-color: #f8f9fa; -ms-overflow-style: none; scrollbar-width: none;">
-          <button @click="activeTab = 'payouts'" class="btn rounded-0 px-4 py-3 fw-bold border-0 text-nowrap" :style="activeTab === 'payouts' ? 'color: #082b59; border-bottom: 3px solid #082b59 !important; background: white;' : 'color: #6b7280;'">Payout Desk</button>
-          <button @click="activeTab = 'approvals'" class="btn rounded-0 px-4 py-3 fw-bold border-0 text-nowrap" :style="activeTab === 'approvals' ? 'color: #082b59; border-bottom: 3px solid #082b59 !important; background: white;' : 'color: #6b7280;'">Product Approvals</button>
+          <button @click="activeTab = 'payouts'" class="btn rounded-0 px-4 py-3 fw-bold border-0 text-nowrap" :style="activeTab === 'payouts' ? 'color: #082b59; border-bottom: 3px solid #082b59 !important; background: white;' : 'color: #6b7280;'">
+            Payout Desk <span v-if="pendingWithdrawals.length > 0" class="badge rounded-pill ms-2" style="background-color: #b22b1d;">{{ pendingWithdrawals.length }}</span>
+          </button>
+          
+          <button @click="activeTab = 'approvals'" class="btn rounded-0 px-4 py-3 fw-bold border-0 text-nowrap" :style="activeTab === 'approvals' ? 'color: #082b59; border-bottom: 3px solid #082b59 !important; background: white;' : 'color: #6b7280;'">
+            Product Directory <span v-if="allProducts.filter(p => !p.is_approved).length > 0" class="badge rounded-pill ms-2" style="background-color: #b22b1d;">{{ allProducts.filter(p => !p.is_approved).length }}</span>
+          </button>
+          
           <button @click="activeTab = 'kyc'" class="btn rounded-0 px-4 py-3 fw-bold border-0 text-nowrap" :style="activeTab === 'kyc' ? 'color: #082b59; border-bottom: 3px solid #082b59 !important; background: white;' : 'color: #6b7280;'">
             KYC Approvals <span v-if="pendingKYC.length > 0" class="badge rounded-pill ms-2" style="background-color: #b22b1d;">{{ pendingKYC.length }}</span>
           </button>
+          
           <button @click="activeTab = 'users'" class="btn rounded-0 px-4 py-3 fw-bold border-0 text-nowrap" :style="activeTab === 'users' ? 'color: #082b59; border-bottom: 3px solid #082b59 !important; background: white;' : 'color: #6b7280;'">User Management</button>
+          
           <button @click="activeTab = 'tickets'" class="btn rounded-0 px-4 py-3 fw-bold border-0 text-nowrap" :style="activeTab === 'tickets' ? 'color: #082b59; border-bottom: 3px solid #082b59 !important; background: white;' : 'color: #6b7280;'">
             Support Tickets <span v-if="openTicketsCount > 0" class="badge rounded-pill ms-2" style="background-color: #b22b1d;">{{ openTicketsCount }}</span>
           </button>
@@ -63,7 +71,6 @@
             <div class="row">
               <div class="col-lg-8">
                 <form @submit.prevent="sendBroadcast" class="bg-light p-4 rounded-4 border">
-                  
                   <div class="mb-3">
                     <label class="form-label fw-bold text-dark small text-uppercase">Target Audience</label>
                     <select v-model="broadcastForm.target" class="form-select bg-white border-0 fw-medium" required>
@@ -73,48 +80,33 @@
                       <option value="specific">Specific User Email</option>
                     </select>
                   </div>
-
                   <div v-if="broadcastForm.target === 'specific'" class="mb-3">
                     <label class="form-label fw-bold text-dark small text-uppercase">Specific Email Address</label>
                     <input type="email" v-model="broadcastForm.specificEmail" class="form-control bg-white border-0" placeholder="user@newgate.edu">
                   </div>
-
                   <div class="mb-3">
                     <label class="form-label fw-bold text-dark small text-uppercase">Subject / Title</label>
                     <input type="text" v-model="broadcastForm.subject" class="form-control bg-white border-0 fw-bold" placeholder="e.g., Important Security Update" required>
                   </div>
-
                   <div class="mb-4">
                     <label class="form-label fw-bold text-dark small text-uppercase">Message</label>
                     <textarea v-model="broadcastForm.message" class="form-control bg-white border-0" rows="6" placeholder="Type your announcement here..." required></textarea>
                   </div>
-
                   <div class="d-flex gap-4 mb-4 p-3 bg-white rounded-3 border">
                     <div class="form-check form-switch">
                       <input class="form-check-input" type="checkbox" v-model="broadcastForm.sendInApp" id="inAppCheck">
-                      <label class="form-check-label fw-bold text-dark" for="inAppCheck"><i class="bi bi-bell-fill text-warning me-1"></i> Send In-App Notification (Bell Icon)</label>
+                      <label class="form-check-label fw-bold text-dark" for="inAppCheck"><i class="bi bi-bell-fill text-warning me-1"></i> Send In-App Notification</label>
                     </div>
                     <div class="form-check form-switch">
                       <input class="form-check-input" type="checkbox" v-model="broadcastForm.sendEmail" id="emailCheck">
                       <label class="form-check-label fw-bold text-dark" for="emailCheck"><i class="bi bi-envelope-fill text-primary me-1"></i> Send Email to Inbox</label>
                     </div>
                   </div>
-
                   <button type="submit" class="btn w-100 fw-bold py-3 rounded-pill shadow-sm" style="background-color: #082b59; color: white;" :disabled="isProcessing">
                     <span v-if="isProcessing" class="spinner-border spinner-border-sm me-2"></span>
                     <i v-else class="bi bi-rocket-takeoff-fill me-2"></i> Launch Broadcast
                   </button>
                 </form>
-              </div>
-              <div class="col-lg-4">
-                <div class="bg-warning-subtle p-4 rounded-4 border border-warning">
-                  <h6 class="fw-bold text-dark"><i class="bi bi-info-circle-fill me-1"></i> Broadcast Rules</h6>
-                  <ul class="small text-dark mb-0 ps-3">
-                    <li class="mb-2">In-App Notifications appear instantly for users.</li>
-                    <li class="mb-2">Emails are sent to the queue and processed automatically in the background by the Edge Function.</li>
-                    <li>Avoid sending emails to "All Users" frequently to prevent spam flagging.</li>
-                  </ul>
-                </div>
               </div>
             </div>
           </div>
@@ -138,25 +130,45 @@
           </div>
 
           <div v-if="activeTab === 'approvals'" class="no-print">
-            <h5 class="fw-bold mb-4 text-dark">Review New Merchandise</h5>
-            <div v-if="pendingProducts.length === 0" class="text-center text-muted py-5"><h5 class="fw-bold">No pending products in the queue.</h5></div>
+            <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+              <h5 class="fw-bold mb-0 text-dark">Merchandise Directory</h5>
+              <select class="form-select w-auto bg-light border-0 fw-bold text-dark" v-model="productFilter">
+                <option value="pending">Pending Approvals</option>
+                <option value="active">Active Products</option>
+                <option value="delisted">De-listed / Hidden</option>
+              </select>
+            </div>
+            <div v-if="filteredProducts.length === 0" class="text-center text-muted py-5"><h5 class="fw-bold">No products match this filter.</h5></div>
             <div v-else class="table-responsive">
               <table class="table align-middle">
-                <thead class="bg-light text-secondary small text-uppercase"><tr><th class="py-3 border-0 rounded-start">Product</th><th class="py-3 border-0">Details</th><th class="py-3 border-0">Seller</th><th class="py-3 border-0 text-end rounded-end">Actions</th></tr></thead>
+                <thead class="bg-light text-secondary small text-uppercase"><tr><th class="py-3 border-0 rounded-start">Product</th><th class="py-3 border-0">Details</th><th class="py-3 border-0">Status</th><th class="py-3 border-0 text-end rounded-end">Actions</th></tr></thead>
                 <tbody>
-                  <tr v-for="product in pendingProducts" :key="product.id">
+                  <tr v-for="product in filteredProducts" :key="product.id">
                     <td class="py-3">
                       <div class="d-flex align-items-center">
                         <img :src="product.image_urls?.[0] || 'https://via.placeholder.com/50'" class="rounded me-3 object-fit-cover" style="width: 50px; height: 50px;">
-                        <div><span class="fw-bold d-block text-dark">{{ product.title }}</span><span class="badge bg-light text-secondary border mt-1">{{ product.category }}</span></div>
+                        <div>
+                          <span class="fw-bold d-block text-dark">{{ product.title }}</span>
+                          <span class="small text-secondary">@{{ product.profiles?.business_name || 'Vendor' }}</span>
+                        </div>
                       </div>
                     </td>
                     <td><div class="fw-bold" style="color: #b22b1d;">₦{{ Number(product.price).toLocaleString() }}</div><small class="text-secondary fw-medium">Stock: {{ product.stock }}</small></td>
-                    <td><span class="fw-bold text-dark">{{ product.profiles?.business_name || product.profiles?.first_name || 'Vendor' }}</span></td>
+                    <td>
+                      <span v-if="!product.is_approved" class="badge bg-warning-subtle text-warning border">Pending</span>
+                      <span v-else-if="!product.is_active" class="badge bg-danger-subtle text-danger border">De-listed</span>
+                      <span v-else class="badge bg-success-subtle text-success border">Active</span>
+                    </td>
                     <td class="text-end">
-                      <div class="d-flex justify-content-end gap-2">
-                        <button @click="approveProduct(product)" class="btn btn-sm fw-bold rounded-pill px-3" style="background-color: #10b981; color: white;" :disabled="isProcessing">Approve</button>
-                        <button @click="rejectProduct(product)" class="btn btn-sm btn-outline-danger fw-bold rounded-pill px-3" :disabled="isProcessing">Reject</button>
+                      <div class="dropdown position-relative">
+                        <button @click="toggleDropdown('prod_'+product.id, $event)" class="btn btn-sm btn-light border fw-bold rounded-pill dropdown-toggle" type="button" :disabled="isProcessing">Actions</button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow border-0" :class="{ 'show d-block': openDropdownId === 'prod_'+product.id }" style="position: absolute; z-index: 1050; margin-top: 5px;">
+                          <li><button v-if="!product.is_approved" @click="approveProduct(product)" class="dropdown-item text-success fw-bold py-2"><i class="bi bi-check-circle me-2"></i>Approve Listing</button></li>
+                          <li><button v-if="product.is_approved && product.is_active" @click="toggleProductStatusAdmin(product)" class="dropdown-item text-warning fw-bold py-2"><i class="bi bi-eye-slash me-2"></i>Force De-list</button></li>
+                          <li><button v-if="product.is_approved && !product.is_active" @click="toggleProductStatusAdmin(product)" class="dropdown-item text-primary fw-bold py-2"><i class="bi bi-eye me-2"></i>Re-list Product</button></li>
+                          <li><hr class="dropdown-divider"></li>
+                          <li><button @click="rejectProduct(product)" class="dropdown-item text-danger fw-bold py-2"><i class="bi bi-trash3-fill me-2"></i>Delete Permanently</button></li>
+                        </ul>
                       </div>
                     </td>
                   </tr>
@@ -233,7 +245,10 @@
                 <thead class="bg-light text-secondary small text-uppercase"><tr><th class="py-3 border-0 rounded-start">User</th><th class="py-3 border-0">Role</th><th class="py-3 border-0">Status</th><th class="py-3 border-0">KYC</th><th class="py-3 border-0 text-end rounded-end">Actions</th></tr></thead>
                 <tbody>
                   <tr v-for="user in filteredUsers" :key="user.id">
-                    <td class="py-3"><div class="fw-bold text-dark" :class="{'text-decoration-line-through text-muted': user.status === 'deleted'}">{{ user.business_name || user.first_name || 'Anonymous' }}</div><small class="text-secondary fw-medium">@{{ user.username || 'user' }}</small></td>
+                    <td class="py-3">
+                      <div class="fw-bold text-dark" :class="{'text-decoration-line-through text-muted': user.status === 'deleted'}">{{ user.business_name || user.first_name || 'Anonymous' }}</div>
+                      <small class="text-secondary fw-medium">@{{ user.username || 'user' }}</small>
+                    </td>
                     <td><span class="badge" :style="user.role === 'seller' ? 'background-color: #082b59;' : 'background-color: #6b7280;'">{{ user.role.toUpperCase() }}</span></td>
                     <td>
                       <span v-if="user.status === 'active'" class="badge bg-success-subtle text-success">Active</span>
@@ -284,7 +299,10 @@
                 <div :id="'ticket-' + index" class="accordion-collapse collapse" data-bs-parent="#ticketsAccordion">
                   <div class="accordion-body bg-white border-top">
                     <div class="d-flex justify-content-between align-items-start mb-3">
-                      <div><p class="small text-secondary mb-0 fw-bold text-uppercase">Reported By</p><p class="fw-bold text-dark mb-0">@{{ ticket.profiles?.username || 'Unknown' }}</p></div>
+                      <div>
+                        <p class="small text-secondary mb-0 fw-bold text-uppercase">Reported By</p>
+                        <p class="fw-bold text-dark mb-0">@{{ ticket.profiles?.username || 'Unknown' }}</p>
+                      </div>
                     </div>
                     <div class="p-3 bg-light rounded-3 mb-3"><p class="mb-0 fw-medium text-dark" style="white-space: pre-wrap;">{{ ticket.description }}</p></div>
                     <div class="d-flex justify-content-end gap-2">
@@ -342,15 +360,15 @@ const openDropdownId = ref(null)
 
 const stats = ref({ totalUsers: 0, totalEscrow: 0 })
 const pendingWithdrawals = ref([])
-const pendingProducts = ref([])
+const allProducts = ref([])
 const allUsers = ref([])
 const auditLogs = ref([])
 const tickets = ref([]) 
 const userFilter = ref('all')
+const productFilter = ref('pending')
 const logFilterUsername = ref(null)
 const selectedKYCUser = ref(null)
 
-// Broadcast Logic Variables
 const broadcastForm = ref({ target: 'all', specificEmail: '', subject: '', message: '', sendInApp: true, sendEmail: false })
 
 const filteredUsers = computed(() => {
@@ -360,6 +378,13 @@ const filteredUsers = computed(() => {
   if (userFilter.value === 'suspended') return allUsers.value.filter(u => u.status === 'suspended' || u.status === 'banned')
   if (userFilter.value === 'kyc_pending') return allUsers.value.filter(u => u.id_card_url && !u.is_verified)
   return allUsers.value
+})
+
+const filteredProducts = computed(() => {
+  if (productFilter.value === 'pending') return allProducts.value.filter(p => !p.is_approved)
+  if (productFilter.value === 'active') return allProducts.value.filter(p => p.is_approved && p.is_active)
+  if (productFilter.value === 'delisted') return allProducts.value.filter(p => p.is_approved && !p.is_active)
+  return allProducts.value
 })
 
 const pendingKYC = computed(() => allUsers.value.filter(u => u.id_card_url && !u.is_verified))
@@ -385,11 +410,12 @@ const fetchAdminData = async () => {
   stats.value.totalUsers = userCount || 0
   if (usersList) stats.value.totalEscrow = usersList.reduce((sum, p) => sum + Number(p.escrow_balance || 0), 0)
 
-  const { data: withdrawals } = await supabase.from('transactions').select(`*, profiles(business_name, first_name, username)`).eq('type', 'debit').eq('status', 'Pending').order('created_at', { ascending: true })
+  const { data: withdrawals } = await supabase.from('transactions').select(`*, profiles(business_name, first_name, username, phone_number)`).eq('type', 'debit').eq('status', 'Pending').order('created_at', { ascending: true })
   pendingWithdrawals.value = withdrawals || []
 
-  const { data: products } = await supabase.from('products').select(`*, profiles(business_name, first_name)`).eq('is_approved', false).order('created_at', { ascending: false })
-  pendingProducts.value = products || []
+  // Note: Fetching phone_number for the WhatsApp routing
+  const { data: products } = await supabase.from('products').select(`*, profiles(business_name, first_name, phone_number)`).order('created_at', { ascending: false })
+  allProducts.value = products || []
 
   const { data: logs } = await supabase.from('admin_logs').select(`*, profiles(username)`).order('created_at', { ascending: false }).limit(500)
   auditLogs.value = logs || []
@@ -398,6 +424,18 @@ const fetchAdminData = async () => {
   tickets.value = ticketsData || []
 
   isLoading.value = false
+}
+
+// WhatsApp Redirect Helper for Admin notifying Users
+const openUserWA = (phone, text) => {
+  if (!phone) {
+    alert("Action recorded in database, but the user has not provided a phone number to notify via WhatsApp.");
+    return;
+  }
+  let cleanPhone = phone.replace(/\D/g, '');
+  if (cleanPhone.startsWith('0')) cleanPhone = '234' + cleanPhone.slice(1);
+  if (cleanPhone.startsWith('+')) cleanPhone = cleanPhone.slice(1);
+  window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`, '_blank');
 }
 
 // BROADCAST SUBMISSION LOGIC
@@ -417,97 +455,119 @@ const sendBroadcast = async () => {
 
     if (targetUsers.length === 0) throw new Error("No users found in the selected target group.")
 
-    // 1. Send In-App Notifications
     if (broadcastForm.value.sendInApp) {
-      const inAppPayload = targetUsers.map(u => ({
-        user_id: u.id,
-        title: broadcastForm.value.subject,
-        message: broadcastForm.value.message
-      }))
+      const inAppPayload = targetUsers.map(u => ({ user_id: u.id, title: broadcastForm.value.subject, message: broadcastForm.value.message }))
       const { error } = await supabase.from('in_app_notifications').insert(inAppPayload)
       if (error) throw error
     }
 
-    // 2. Queue Emails for Edge Function
     if (broadcastForm.value.sendEmail) {
-      const emailPayload = targetUsers.map(u => ({
-        email_address: u.email,
-        subject: broadcastForm.value.subject,
-        html_body: `<div style="font-family: sans-serif;"><h2>${broadcastForm.value.subject}</h2><p style="white-space: pre-wrap;">${broadcastForm.value.message}</p></div>`
-      }))
+      const emailPayload = targetUsers.map(u => ({ email_address: u.email, subject: broadcastForm.value.subject, html_body: `<div style="font-family: sans-serif;"><h2>${broadcastForm.value.subject}</h2><p style="white-space: pre-wrap;">${broadcastForm.value.message}</p></div>` }))
       const { error } = await supabase.from('email_queue').insert(emailPayload)
       if (error) throw error
     }
 
     await logAdminAction('System Broadcast', `Sent broadcast to ${broadcastForm.value.target} (${targetUsers.length} users).`)
     alert(`Success! Broadcast dispatched to ${targetUsers.length} users.`)
-    
     broadcastForm.value = { target: 'all', specificEmail: '', subject: '', message: '', sendInApp: true, sendEmail: false }
 
-  } catch (error) {
-    alert("Broadcast Error: " + error.message)
-  } finally {
-    isProcessing.value = false
-  }
+  } catch (error) { alert("Broadcast Error: " + error.message) } finally { isProcessing.value = false }
 }
 
-// Admin Action Methods 
 const viewUserLogs = (username) => { closeDropdown(); logFilterUsername.value = username; activeTab.value = 'logs'; }
 const clearLogFilter = () => { logFilterUsername.value = null; activeTab.value = 'logs'; }
 const printLogs = () => { window.print(); }
+
 const resolveTicket = async (ticketId) => {
   if (!confirm("Close this ticket and mark it as resolved?")) return
   isProcessing.value = true
   try {
     await supabase.from('tickets').update({ status: 'resolved' }).eq('id', ticketId)
     await logAdminAction('Ticket Resolved', `Resolved support ticket ID: ${ticketId}`)
-    alert("Ticket resolved successfully."); await fetchAdminData()
+    alert("Ticket resolved successfully."); window.dispatchEvent(new Event('admin_action_completed')); await fetchAdminData()
   } catch (error) { alert("Error resolving ticket: " + error.message) } finally { isProcessing.value = false }
 }
+
 const approveKYC = async (user) => {
   if (!confirm(`Approve KYC for ${user.first_name || user.business_name}?`)) return;
   isProcessing.value = true
   try {
     await supabase.from('profiles').update({ is_verified: true }).eq('id', user.id)
     await logAdminAction('KYC Verified', `Approved ${user.kyc_doc_type || 'ID Card'} for @${user.username}`)
-    alert("User Identity Verified successfully!"); selectedKYCUser.value = null; await fetchAdminData()
+    
+    // Notify User via WhatsApp
+    const msg = `🎉 *KYC APPROVED*\n\nHello ${user.business_name || user.first_name}, your identity document has been approved! You now have full verified access to NUM BAZAAR.`;
+    openUserWA(user.phone_number, msg);
+
+    selectedKYCUser.value = null; 
+    window.dispatchEvent(new Event('admin_action_completed')); await fetchAdminData()
   } catch (error) { alert("Error: " + error.message) } finally { isProcessing.value = false }
 }
+
 const rejectKYC = async (user) => {
   if (!confirm(`Reject KYC for ${user.first_name || user.business_name}?`)) return;
   isProcessing.value = true
   try {
     await supabase.from('profiles').update({ id_card_url: null, kyc_doc_type: null }).eq('id', user.id)
     await logAdminAction('KYC Rejected', `Rejected Document for @${user.username}`)
-    alert("KYC Rejected."); selectedKYCUser.value = null; await fetchAdminData()
+    alert("KYC Rejected."); selectedKYCUser.value = null; window.dispatchEvent(new Event('admin_action_completed')); await fetchAdminData()
   } catch (error) { alert("Error: " + error.message) } finally { isProcessing.value = false }
 }
+
 const markAsPaid = async (req) => {
   if (!confirm("Are you sure you have physically transferred this money?")) return;
   isProcessing.value = true
   try {
     await supabase.from('transactions').update({ status: 'Completed', description: 'Paid via Bank Transfer' }).eq('id', req.id)
     await logAdminAction('Payout Completed', `Processed ₦${req.amount} payout for @${req.profiles?.username || 'user'}`)
-    alert("Success!"); await fetchAdminData()
+    
+    // Notify Vendor via WhatsApp
+    const msg = `💰 *PAYOUT PROCESSED*\n\nHello ${req.profiles?.business_name || req.profiles?.first_name}, your payout of ₦${req.amount} has been successfully transferred to your bank account.`;
+    openUserWA(req.profiles?.phone_number, msg);
+
+    window.dispatchEvent(new Event('admin_action_completed')); await fetchAdminData()
   } catch (error) { alert("Error: " + error.message) } finally { isProcessing.value = false }
 }
+
+// ADMIN PRODUCT CONTROLS
 const approveProduct = async (product) => {
+  closeDropdown();
   isProcessing.value = true
   try {
-    await supabase.from('products').update({ is_approved: true }).eq('id', product.id)
+    await supabase.from('products').update({ is_approved: true, is_active: true }).eq('id', product.id)
     await logAdminAction('Product Approved', `Approved product: "${product.title}"`)
-    await fetchAdminData()
+    
+    // Notify Vendor via WhatsApp
+    const msg = `✅ *PRODUCT APPROVED*\n\nHello ${product.profiles?.business_name || product.profiles?.first_name}, your product "${product.title}" has been approved and is now live on NUM BAZAAR!`;
+    openUserWA(product.profiles?.phone_number, msg);
+
+    window.dispatchEvent(new Event('admin_action_completed')); await fetchAdminData()
   } catch (error) { alert("Error: " + error.message) } finally { isProcessing.value = false }
 }
+
+const toggleProductStatusAdmin = async (product) => {
+  closeDropdown();
+  const newStatus = !product.is_active;
+  if (!confirm(`Are you sure you want to force ${newStatus ? 're-list' : 'de-list'} "${product.title}"?`)) return;
+  isProcessing.value = true
+  try {
+    await supabase.from('products').update({ is_active: newStatus }).eq('id', product.id)
+    await logAdminAction('Product Status Changed', `Admin forced ${newStatus ? 'Re-list' : 'De-list'} on: "${product.title}"`)
+    window.dispatchEvent(new Event('admin_action_completed')); await fetchAdminData()
+  } catch (error) { alert("Error: " + error.message) } finally { isProcessing.value = false }
+}
+
 const rejectProduct = async (product) => {
-  if (!confirm("Reject and delete this product?")) return;
+  closeDropdown();
+  if (!confirm("Reject and delete this product permanently?")) return;
   isProcessing.value = true
   try {
     await supabase.from('products').delete().eq('id', product.id)
-    await logAdminAction('Product Rejected', `Deleted rejected product: "${product.title}"`)
-    await fetchAdminData()
+    await logAdminAction('Product Deleted', `Admin deleted product: "${product.title}"`)
+    window.dispatchEvent(new Event('admin_action_completed')); await fetchAdminData()
   } catch (error) { alert("Error: " + error.message) } finally { isProcessing.value = false }
 }
+
 const forceVerifyUser = async (user) => {
   closeDropdown();
   if (!confirm(`Are you sure you want to bypass KYC and instantly verify ${user.business_name || user.first_name}?`)) return;
@@ -515,9 +575,10 @@ const forceVerifyUser = async (user) => {
   try {
     await supabase.from('profiles').update({ is_verified: true, kyc_doc_type: 'Admin Bypass' }).eq('id', user.id);
     await logAdminAction('KYC Bypassed', `Force verified @${user.username} for exhibition access.`);
-    alert("User successfully verified!"); await fetchAdminData();
+    alert("User successfully verified!"); window.dispatchEvent(new Event('admin_action_completed')); await fetchAdminData();
   } catch (error) { alert("Error: " + error.message); } finally { isProcessing.value = false; }
 }
+
 const activateUser = async (user) => {
   closeDropdown(); if (!confirm("Restore full access?")) return; isProcessing.value = true
   try {
@@ -526,6 +587,7 @@ const activateUser = async (user) => {
     alert("User activated."); await fetchAdminData()
   } catch (error) { alert("Error: " + error.message) } finally { isProcessing.value = false }
 }
+
 const suspendUser = async (user) => {
   closeDropdown(); const days = prompt("Enter number of days:", "7"); if (!days || isNaN(days)) return;
   const endDate = new Date(); endDate.setDate(endDate.getDate() + parseInt(days));
@@ -533,21 +595,31 @@ const suspendUser = async (user) => {
   try {
     await supabase.from('profiles').update({ status: 'suspended', suspension_ends_at: endDate.toISOString() }).eq('id', user.id)
     await logAdminAction('Account Suspended', `Suspended @${user.username} for ${days} days.`)
-    alert(`User suspended.`); await fetchAdminData()
+    
+    const msg = `⚠️ *ACCOUNT SUSPENDED*\n\nHello ${user.username}, your NUM BAZAAR account has been suspended for ${days} days due to a violation of our marketplace policies. Please contact support if you believe this is an error.`;
+    openUserWA(user.phone_number, msg);
+
+    await fetchAdminData()
   } catch (error) { alert("Error: " + error.message) } finally { isProcessing.value = false }
 }
+
 const banUser = async (user) => {
   closeDropdown(); if (!confirm("Permanently ban this user?")) return; isProcessing.value = true
   try {
     await supabase.from('profiles').update({ status: 'banned', suspension_ends_at: null }).eq('id', user.id)
     await logAdminAction('Account Banned', `Permanently banned @${user.username}.`)
-    alert("User banned."); await fetchAdminData()
+    
+    const msg = `🚫 *ACCOUNT BANNED*\n\nHello ${user.username}, your NUM BAZAAR account has been permanently banned due to severe violations of our terms of service.`;
+    openUserWA(user.phone_number, msg);
+
+    await fetchAdminData()
   } catch (error) { alert("Error: " + error.message) } finally { isProcessing.value = false }
 }
+
 const deleteUser = async (user) => {
   closeDropdown(); if (!confirm("CRITICAL WARNING: Proceed?")) return; isProcessing.value = true
   try {
-    await supabase.from('profiles').update({ status: 'deleted', business_name: 'Deleted User', first_name: 'Deleted', last_name: 'User', username: 'deleted_' + user.id.substring(0,6), profile_image: null, bank_name: null, account_number: null, account_name: null, id_card_url: null, suspension_ends_at: null }).eq('id', user.id)
+    await supabase.from('profiles').update({ status: 'deleted', business_name: 'Deleted User', first_name: 'Deleted', last_name: 'User', username: 'deleted_' + user.id.substring(0,6), profile_image: null, bank_name: null, account_number: null, account_name: null, id_card_url: null, suspension_ends_at: null, phone_number: null }).eq('id', user.id)
     await supabase.from('products').delete().eq('seller_id', user.id)
     await logAdminAction('Account Deleted', `Wiped all data for @${user.username}.`)
     alert("User data wiped."); await fetchAdminData()
