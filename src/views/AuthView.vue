@@ -11,7 +11,7 @@
         <span class="text-secondary small fw-medium">Newgate University Digital Marketplace</span>
       </div>
 
-      <div class="p-4 p-md-5 w-100 bg-white" style="max-width: 480px; border-radius: 16px; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 4px 20px rgba(0,0,0,0.03);">
+      <div class="p-4 p-md-5 w-100 bg-white shadow" style="max-width: 500px; border-radius: 16px; border: 1px solid rgba(0,0,0,0.05);">
         
         <div class="text-center mb-4">
           <div class="rounded-circle d-inline-flex justify-content-center align-items-center mb-3" style="width: 50px; height: 50px; background-color: #e0e7ff; color: #3730a3;">
@@ -65,6 +65,16 @@
             </div>
           </div>
 
+          <div v-if="!isLogin && affiliation === 'Student' && accountType === 'seller'" class="mb-3 bg-warning-subtle p-3 rounded-4 border border-warning">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="entCheck" v-model="isEnt211">
+              <label class="form-check-label small fw-bold text-dark" for="entCheck">
+                I am currently taking ENT211 (Entrepreneurship & Innovation)
+              </label>
+            </div>
+            <p class="small text-secondary mb-0 mt-1" style="font-size: 0.75rem;"><i class="bi bi-gift-fill text-warning me-1"></i> Verify to unlock 3 months of free storefront subscription!</p>
+          </div>
+
           <div class="mb-3">
             <label class="form-label small fw-bold text-uppercase text-dark" style="letter-spacing: 0.05em;">Email Address</label>
             <div class="position-relative">
@@ -79,12 +89,19 @@
               <span v-if="isLogin" @click="handlePasswordReset" style="color: #b22b1d; cursor:pointer; text-transform: none;">Forgot?</span>
             </label>
             <div class="position-relative">
-              <input type="password" v-model="password" class="form-control w-100" placeholder="••••••••••••" style="background-color: #e9ecef; border: none; border-radius: 12px; padding: 14px 20px; font-weight: 500; color: #111827;" :required="!isResetting">
+              <input type="password" v-model="password" class="form-control w-100" placeholder="••••••••••••" style="background-color: #e9ecef; border: none; border-radius: 12px; padding: 14px 20px; font-weight: 500; color: #111827;" :required="!isResetting" minlength="6">
               <i class="bi bi-eye position-absolute top-50 end-0 translate-middle-y me-3 text-secondary"></i>
             </div>
           </div>
 
-          <button type="submit" class="btn w-100 fs-6 py-3 mb-4 d-flex justify-content-center align-items-center gap-2" style="background-color: #b22b1d; color: white; border-radius: 999px; font-weight: 600; border: none;" :disabled="loading">
+          <div v-if="!isLogin" class="form-check mb-4 bg-light p-3 rounded-4 border">
+            <input class="form-check-input ms-1 mt-1" type="checkbox" id="termsCheck" v-model="acceptedTerms" required>
+            <label class="form-check-label small fw-medium text-secondary ms-2" for="termsCheck" style="line-height: 1.4;">
+              I agree to the <router-link to="/terms" target="_blank" style="color: #082b59; font-weight: bold;">Terms and Conditions</router-link>, Escrow rules, and mandatory Identity Verification (KYC).
+            </label>
+          </div>
+
+          <button type="submit" class="btn w-100 fs-6 py-3 mb-4 d-flex justify-content-center align-items-center gap-2" style="background-color: #b22b1d; color: white; border-radius: 999px; font-weight: 600; border: none;" :disabled="loading || (!isLogin && !acceptedTerms)">
             <span v-if="loading" class="spinner-border spinner-border-sm"></span>
             {{ isLogin ? 'Join the Bazaar' : 'Register Account' }} <i class="bi bi-arrow-right"></i>
           </button>
@@ -109,6 +126,8 @@ const lastName = ref('')
 const username = ref('')
 const accountType = ref('buyer') 
 const affiliation = ref('Student')
+const isEnt211 = ref(false)
+const acceptedTerms = ref(false)
 
 const loading = ref(false)
 const isResetting = ref(false)
@@ -121,6 +140,7 @@ const handleAuth = async () => {
       if (error) throw error
       router.push('/shop')
     } else {
+      
       // 1. Create Auth User
       const { data: authData, error: authError } = await supabase.auth.signUp({ 
         email: email.value, 
@@ -128,7 +148,15 @@ const handleAuth = async () => {
       })
       if (authError) throw authError
 
-      // 2. EXPLICITLY CREATE DATABASE PROFILE
+      // 2. Logic for 3-Months Free (ENT211)
+      let freeSubscriptionEnd = null;
+      if (isEnt211.value && accountType.value === 'seller') {
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + 90); // Add 90 days
+        freeSubscriptionEnd = expiryDate.toISOString();
+      }
+
+      // 3. EXPLICITLY CREATE DATABASE PROFILE
       if (authData?.user) {
         const { error: profileError } = await supabase.from('profiles').insert([{
           id: authData.user.id,
@@ -137,6 +165,8 @@ const handleAuth = async () => {
           username: username.value,
           role: accountType.value,
           campus_affiliation: affiliation.value,
+          is_ent211: isEnt211.value,
+          subscription_ends_at: freeSubscriptionEnd, // Grants the 3 months if applicable
           business_name: ['seller', 'external'].includes(accountType.value) ? `${firstName.value}'s Store` : null
         }])
         
@@ -146,6 +176,7 @@ const handleAuth = async () => {
         }
       }
 
+      alert(isEnt211.value ? "Registration successful! Enjoy your 3 free months." : "Registration successful! Welcome to NUM BAZAAR.")
       router.push('/shop')
     }
   } catch (error) {

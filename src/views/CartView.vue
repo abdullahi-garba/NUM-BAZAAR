@@ -124,86 +124,99 @@ const processCheckout = async () => {
 
     const userEmail = currentUser.value.email
 
-    if (typeof window.PaystackPop === 'undefined') {
-      throw new Error("Paystack script is not loaded in your index.html file!")
-    }
-
-    const handler = window.PaystackPop.setup({
-      key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY, 
-      email: userEmail,
-      amount: finalTotal.value * 100, 
-      currency: 'NGN',
-      ref: 'NUM_' + Math.floor((Math.random() * 1000000000) + 1), 
-      
-      callback: function(response) {
+    // Dynamic Paystack Launcher
+    const launchPaystack = () => {
+      const handler = window.PaystackPop.setup({
+        key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY, 
+        email: userEmail,
+        amount: finalTotal.value * 100, 
+        currency: 'NGN',
+        ref: 'NUM_' + Math.floor((Math.random() * 1000000000) + 1), 
         
-        const completeDatabaseUpdates = async () => {
-          try {
-            // A. Create the Order Records in Escrow
-            const ordersToInsert = cartItems.value.map(item => {
-              const itemFee = Math.round(Number(item.price) * 0.02);
-              const itemTotal = Number(item.price) + itemFee; // Calculate the total for this specific item
+        callback: function(response) {
+          
+          const completeDatabaseUpdates = async () => {
+            try {
+              // A. Create the Order Records in Escrow
+              const ordersToInsert = cartItems.value.map(item => {
+                const itemFee = Math.round(Number(item.price) * 0.02);
+                const itemTotal = Number(item.price) + itemFee; 
+                
+                return {
+                  buyer_id: currentUser.value.id,
+                  seller_id: item.seller_id,
+                  product_id: item.id,
+                  product_name: item.title,
+                  product_price: item.price, 
+                  product_image: item.image_urls[0],
+                  status: 'Paid (In Escrow)',
+                  paystack_reference: response.reference,
+                  platform_fee: itemFee,
+                  total_amount: itemTotal 
+                }
+              })
               
-              return {
-                buyer_id: currentUser.value.id,
-                seller_id: item.seller_id,
-                product_id: item.id,
-                product_name: item.title,
-                product_price: item.price, 
-                product_image: item.image_urls[0],
-                status: 'Paid (In Escrow)',
-                paystack_reference: response.reference,
-                platform_fee: itemFee,
-                total_amount: itemTotal // FIX: Added the missing total_amount column
-              }
-            })
-            
-            const { error: orderError } = await supabase.from('orders').insert(ordersToInsert)
-            if (orderError) throw new Error("Order Insert Failed: " + orderError.message)
+              const { error: orderError } = await supabase.from('orders').insert(ordersToInsert)
+              if (orderError) throw new Error("Order Insert Failed: " + orderError.message)
 
-            // B. INVENTORY & ESCROW ALGORITHM
-            for (const item of cartItems.value) {
+              // B. INVENTORY & ESCROW ALGORITHM
+              for (const item of cartItems.value) {
+                // 1. Deplete Stock
+                const { data: currentProduct } = await supabase.from('products').select('stock').eq('id', item.id).single()
+                if (currentProduct && currentProduct.stock > 0) {
+                  const { error: stockErr } = await supabase.from('products').update({ stock: currentProduct.stock - 1 }).eq('id', item.id)
+                  if (stockErr) throw new Error("Stock Update Failed: " + stockErr.message)
+                }
+
+                // 2. Update Seller's Escrow Balance
+                const { data: seller } = await supabase.from('profiles').select('escrow_balance').eq('id', item.seller_id).single()
+                if (seller) {
+                  const newEscrow = Number(seller.escrow_balance || 0) + Number(item.price)
+                  const { error: escrowErr } = await supabase.from('profiles').update({ escrow_balance: newEscrow }).eq('id', item.seller_id)
+                  if (escrowErr) throw new Error("Escrow Update Failed: " + escrowErr.message)
+                }
+              }
+
+              // C. Clear the Cart securely
+              localStorage.removeItem('num_bazaar_cart')
+              cartItems.value = []
+              window.dispatchEvent(new Event('storage'))
+
+              alert("Payment Successful! Your funds are securely locked in Escrow. Redirecting to your Profile...")
+              router.push(`/profile/${currentUser.value.id}`)
               
-              // 1. Deplete Stock
-              const { data: currentProduct } = await supabase.from('products').select('stock').eq('id', item.id).single()
-              if (currentProduct && currentProduct.stock > 0) {
-                const { error: stockErr } = await supabase.from('products').update({ stock: currentProduct.stock - 1 }).eq('id', item.id)
-                if (stockErr) throw new Error("Stock Update Failed: " + stockErr.message)
-              }
-
-              // 2. Update Seller's Escrow Balance
-              const { data: seller } = await supabase.from('profiles').select('escrow_balance').eq('id', item.seller_id).single()
-              if (seller) {
-                const newEscrow = Number(seller.escrow_balance || 0) + Number(item.price)
-                const { error: escrowErr } = await supabase.from('profiles').update({ escrow_balance: newEscrow }).eq('id', item.seller_id)
-                if (escrowErr) throw new Error("Escrow Update Failed: " + escrowErr.message)
-              }
+            } catch (error) {
+              console.error("Database Error Post-Payment:", error)
+              alert("Database Error: " + error.message)
+            } finally {
+              isProcessing.value = false
             }
-
-            // C. Clear the Cart securely
-            localStorage.removeItem('num_bazaar_cart')
-            cartItems.value = []
-            window.dispatchEvent(new Event('storage'))
-
-            alert("Payment Successful! Your funds are securely locked in Escrow. Redirecting to your Profile...")
-            router.push(`/profile/${currentUser.value.id}`)
-            
-          } catch (error) {
-            console.error("Database Error Post-Payment:", error)
-            alert("Database Error: " + error.message)
-          } finally {
-            isProcessing.value = false
           }
+
+          completeDatabaseUpdates()
+        },
+        onClose: function() {
+          isProcessing.value = false;
         }
+      });
 
-        completeDatabaseUpdates()
-      },
-      onClose: function() {
+      handler.openIframe();
+    };
+
+    // Check if script exists, otherwise load it dynamically
+    if (window.PaystackPop) {
+      launchPaystack();
+    } else {
+      const script = document.createElement('script');
+      script.src = "https://js.paystack.co/v1/inline.js";
+      script.async = true;
+      script.onload = () => launchPaystack();
+      script.onerror = () => {
+        alert("Failed to load secure payment gateway. Please check your internet connection.");
         isProcessing.value = false;
-      }
-    });
-
-    handler.openIframe();
+      };
+      document.body.appendChild(script);
+    }
     
   } catch (error) {
     console.error("Initialization Error:", error)

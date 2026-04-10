@@ -1,21 +1,34 @@
 <template>
   <div class="bg-light min-vh-100 pb-5">
     
-    <div style="height: 200px; background-color: #082b59; position: relative; background-size: cover; background-position: center;" :style="profile?.cover_image ? `background-image: url('${profile.cover_image}');` : ''">
+    <div class="no-print" style="height: 200px; background-color: #082b59; position: relative; background-size: cover; background-position: center;" :style="profile?.cover_image ? `background-image: url('${profile.cover_image}');` : ''">
       <div class="position-absolute w-100 h-100" style="background: linear-gradient(to bottom, rgba(8,43,89,0.5), rgba(8,43,89,1));"></div>
     </div>
 
-    <div class="container px-lg-5" style="margin-top: -80px; position: relative; z-index: 10;">
+    <div class="container px-lg-5 printable-container" style="margin-top: -80px; position: relative; z-index: 10;">
       
-      <div v-if="isLoading" class="text-center py-5"><div class="spinner-border" style="color: #b22b1d;"></div></div>
+      <div v-if="isLoading" class="text-center py-5 no-print"><div class="spinner-border" style="color: #b22b1d;"></div></div>
       
       <div v-else-if="profile" class="row g-4">
         
-        <div class="col-lg-4">
+        <div class="d-none print-only-header text-center mb-4 col-12">
+          <h3 class="fw-black text-dark">NUM BAZAAR</h3>
+          <h4>Official User Record</h4>
+          <p><strong>Account:</strong> {{ profile.business_name || `${profile.first_name || ''} ${profile.last_name || ''}`.trim() }} (@{{ profile.username }})</p>
+          <p><strong>Generated on:</strong> {{ new Date().toLocaleString() }}</p>
+          <hr>
+        </div>
+
+        <div class="col-lg-4 no-print">
           <div class="bg-white p-4 shadow-sm" style="border-radius: 16px; border: 1px solid rgba(0,0,0,0.05);">
             
             <div class="text-center mb-4">
-              <img :src="profile.profile_image || `https://ui-avatars.com/api/?name=${profile.first_name || 'User'}&background=e9ecef&color=082b59&size=120`" class="rounded-circle border border-4 border-white shadow-sm mb-3 object-fit-cover" style="width: 120px; height: 120px; background-color: white;">
+              <div class="position-relative d-inline-block">
+                <img :src="profile.profile_image || `https://ui-avatars.com/api/?name=${profile.first_name || 'User'}&background=e9ecef&color=082b59&size=120`" class="rounded-circle border border-4 border-white shadow-sm mb-3 object-fit-cover" style="width: 120px; height: 120px; background-color: white;">
+                <span v-if="profile.is_verified" class="position-absolute bottom-0 end-0 bg-success text-white rounded-circle p-1 mb-3 shadow-sm border border-2 border-white" title="Verified Account">
+                  <i class="bi bi-patch-check-fill fs-5"></i>
+                </span>
+              </div>
               
               <h4 class="fw-bold text-dark mb-0">{{ profile.business_name || `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Anonymous User' }}</h4>
               <p class="text-secondary fw-medium mb-2">@{{ profile.username }}</p>
@@ -61,9 +74,51 @@
           </div>
         </div>
 
-        <div class="col-lg-8">
+        <div class="col-lg-8 printable-content">
           
-          <div v-if="isEditing" class="bg-white p-4 shadow-sm" style="border-radius: 16px; border: 1px solid rgba(0,0,0,0.05);">
+          <div v-if="isOwnProfile && !profile.is_verified && profile.role !== 'admin'" class="mb-4 no-print">
+            
+            <div v-if="profile.id_card_url" class="bg-warning-subtle p-4 rounded-4 border border-warning d-flex align-items-start gap-3 shadow-sm">
+              <i class="bi bi-hourglass-split fs-1 text-warning"></i>
+              <div>
+                <h5 class="fw-bold text-dark mb-1">Identity Verification Pending</h5>
+                <p class="text-secondary fw-medium mb-0 small">Your {{ profile.kyc_doc_type || 'document' }} is currently being reviewed by the Admin Command Center. You will be granted full access to the marketplace once approved.</p>
+              </div>
+            </div>
+            
+            <div v-else class="bg-danger-subtle p-4 rounded-4 border border-danger shadow-sm">
+              <div class="d-flex align-items-start gap-3 mb-3">
+                <i class="bi bi-shield-exclamation fs-1 text-danger"></i>
+                <div>
+                  <h5 class="fw-bold text-dark mb-1">Action Required: Upload ID Card</h5>
+                  <p class="text-secondary fw-medium mb-0 small">To access the marketplace and ensure a scam-free environment, please submit a valid Student/Staff ID. If you do not have an ID yet, you may upload your School Fees Receipt.</p>
+                </div>
+              </div>
+              <form @submit.prevent="submitKYC" class="d-flex flex-column gap-3 bg-white p-3 rounded-3 border">
+                <div class="row g-2">
+                  <div class="col-md-5">
+                    <select v-model="kycDocType" class="form-select bg-light border-0 fw-bold text-dark" style="font-size: 0.9rem;" required>
+                      <option value="" disabled>Select Document Type...</option>
+                      <option value="Student ID Card">Student ID Card</option>
+                      <option value="Staff ID Card">Staff ID Card</option>
+                      <option value="School Fees Receipt">School Fees Receipt (No ID)</option>
+                    </select>
+                  </div>
+                  <div class="col-md-7">
+                    <input type="file" class="form-control border-0 bg-light" accept="image/*" @change="e => idCardFile = e.target.files[0]" required>
+                  </div>
+                </div>
+                <div class="text-end">
+                  <button type="submit" class="btn fw-bold px-4 text-nowrap rounded-pill shadow-sm" style="background-color: #b22b1d; color: white;" :disabled="isUploadingKYC">
+                    <span v-if="isUploadingKYC" class="spinner-border spinner-border-sm me-2"></span>
+                    {{ isUploadingKYC ? 'Uploading...' : 'Submit for Review' }}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <div v-if="isEditing" class="bg-white p-4 shadow-sm no-print" style="border-radius: 16px; border: 1px solid rgba(0,0,0,0.05);">
             <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
               <h5 class="fw-bold text-dark mb-0">Update Profile Details</h5>
               <button @click="isEditing = false" class="btn-close"></button>
@@ -139,19 +194,31 @@
 
           <div v-else>
             
-            <div class="d-flex border-bottom mb-4 gap-4" style="overflow-x: auto; white-space: nowrap;">
-              <button v-if="isVendor || listings.length > 0" @click="activeTab = 'listings'" class="btn p-0 pb-2 fw-bold rounded-0" :class="activeTab === 'listings' ? 'text-dark border-bottom border-dark border-3' : 'text-secondary border-0'">Active Storefront</button>
-              <button v-if="isVendor || publicTransactions.length > 0" @click="activeTab = 'transactions'" class="btn p-0 pb-2 fw-bold rounded-0" :class="activeTab === 'transactions' ? 'text-dark border-bottom border-dark border-3' : 'text-secondary border-0'">Public History</button>
-              
-              <button v-if="isOwnProfile && isVendor" @click="activeTab = 'sales'" class="btn p-0 pb-2 fw-bold rounded-0 d-flex align-items-center gap-2" :class="activeTab === 'sales' ? 'text-dark border-bottom border-dark border-3' : 'text-secondary border-0'">
-                Manage Sales
-                <span v-if="pendingSalesCount > 0" class="badge rounded-pill bg-danger" style="font-size: 0.65rem;">{{ pendingSalesCount }}</span>
-              </button>
+            <div class="d-flex justify-content-between align-items-center mb-4 no-print">
+              <div class="d-flex gap-4 border-bottom" style="overflow-x: auto; white-space: nowrap;">
+                <button v-if="isVendor || listings.length > 0" @click="activeTab = 'listings'" class="btn p-0 pb-2 fw-bold rounded-0" :class="activeTab === 'listings' ? 'text-dark border-bottom border-dark border-3' : 'text-secondary border-0'">Active Storefront</button>
+                <button v-if="isVendor || publicTransactions.length > 0" @click="activeTab = 'transactions'" class="btn p-0 pb-2 fw-bold rounded-0" :class="activeTab === 'transactions' ? 'text-dark border-bottom border-dark border-3' : 'text-secondary border-0'">Public History</button>
+                
+                <button v-if="isOwnProfile && isVendor" @click="activeTab = 'sales'" class="btn p-0 pb-2 fw-bold rounded-0 d-flex align-items-center gap-2" :class="activeTab === 'sales' ? 'text-dark border-bottom border-dark border-3' : 'text-secondary border-0'">
+                  Manage Sales
+                  <span v-if="pendingSalesCount > 0" class="badge rounded-pill bg-danger" style="font-size: 0.65rem;">{{ pendingSalesCount }}</span>
+                </button>
 
-              <button v-if="isOwnProfile" @click="activeTab = 'purchases'" class="btn p-0 pb-2 fw-bold rounded-0" :class="activeTab === 'purchases' ? 'text-dark border-bottom border-dark border-3' : 'text-secondary border-0'">My Purchases</button>
+                <button v-if="isOwnProfile" @click="activeTab = 'purchases'" class="btn p-0 pb-2 fw-bold rounded-0" :class="activeTab === 'purchases' ? 'text-dark border-bottom border-dark border-3' : 'text-secondary border-0'">My Purchases</button>
+              </div>
+
+              <button v-if="isOwnProfile && ['sales', 'purchases', 'transactions'].includes(activeTab)" @click="printHistory" class="btn btn-outline-dark btn-sm fw-bold rounded-pill shadow-sm">
+                <i class="bi bi-printer-fill me-1"></i> Print / Save PDF
+              </button>
             </div>
 
-            <div v-if="activeTab === 'listings'">
+            <h5 class="d-none print-only-header text-dark fw-bold mb-3 border-bottom pb-2 text-uppercase">
+              <span v-if="activeTab === 'transactions'">Public Transaction History</span>
+              <span v-else-if="activeTab === 'sales'">Vendor Sales Log</span>
+              <span v-else-if="activeTab === 'purchases'">Purchases Log</span>
+            </h5>
+
+            <div v-if="activeTab === 'listings'" class="no-print">
               <div v-if="listings.length === 0" class="bg-white p-5 text-center shadow-sm" style="border-radius: 16px; border: 1px solid rgba(0,0,0,0.05);">
                 <i class="bi bi-shop fs-1 text-secondary mb-3 d-block"></i>
                 <h5 class="fw-bold text-dark">Storefront Empty</h5>
@@ -182,14 +249,14 @@
               </div>
 
               <div v-else class="d-flex flex-column gap-3">
-                <div v-for="tx in publicTransactions" :key="tx.id" class="bg-white p-3 shadow-sm d-flex justify-content-between align-items-center" style="border-radius: 16px; border: 1px solid rgba(0,0,0,0.05);">
+                <div v-for="tx in publicTransactions" :key="tx.id" class="bg-white p-3 shadow-sm d-flex justify-content-between align-items-center print-row" style="border-radius: 16px; border: 1px solid rgba(0,0,0,0.05);">
                   <div>
                     <h6 class="fw-bold text-dark mb-1 text-truncate" style="max-width: 200px;">{{ tx.product_name }}</h6>
-                    <span class="small text-secondary fw-medium"><i class="bi bi-calendar-check me-1"></i> {{ new Date(tx.created_at).toLocaleDateString() }}</span>
+                    <span class="small text-secondary fw-medium"><i class="bi bi-calendar-check me-1 no-print"></i> {{ new Date(tx.created_at).toLocaleString() }}</span>
                   </div>
                   <div class="text-end">
                     <h6 class="fw-bold mb-1" style="color: #10b981;">+₦{{ Number(tx.product_price).toLocaleString() }}</h6>
-                    <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check-circle-fill me-1"></i> Delivered</span>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check-circle-fill me-1 no-print"></i> Delivered</span>
                   </div>
                 </div>
               </div>
@@ -203,21 +270,22 @@
               </div>
 
               <div v-else class="d-flex flex-column gap-3">
-                <div v-for="order in allSales" :key="order.id" class="bg-white p-3 shadow-sm d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3" style="border-radius: 16px; border: 1px solid rgba(0,0,0,0.05); border-left: 4px solid" :style="order.status.includes('Completed') ? 'border-left-color: #10b981;' : 'border-left-color: #f59e0b;'">
+                <div v-for="order in allSales" :key="order.id" class="bg-white p-3 shadow-sm d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 print-row" style="border-radius: 16px; border: 1px solid rgba(0,0,0,0.05); border-left: 4px solid" :style="order.status.includes('Completed') ? 'border-left-color: #10b981;' : 'border-left-color: #f59e0b;'">
                   <div class="d-flex align-items-center gap-3">
-                    <img :src="order.product_image || 'https://via.placeholder.com/60'" class="rounded object-fit-cover shadow-sm" style="width: 60px; height: 60px;">
+                    <img :src="order.product_image || 'https://via.placeholder.com/60'" class="rounded object-fit-cover shadow-sm no-print" style="width: 60px; height: 60px;">
                     <div>
                       <h6 class="fw-bold text-dark mb-1">{{ order.product_name }}</h6>
+                      <small class="d-none print-only-text d-block mb-1">{{ new Date(order.created_at).toLocaleString() }}</small>
                       <span class="badge" :class="order.status.includes('Completed') ? 'bg-success' : 'bg-warning text-dark border border-warning'">
-                        <i class="bi" :class="order.status.includes('Completed') ? 'bi-check-circle-fill' : 'bi-hourglass-split'"></i> 
+                        <i class="bi no-print" :class="order.status.includes('Completed') ? 'bi-check-circle-fill' : 'bi-hourglass-split'"></i> 
                         {{ order.status }}
                       </span>
                     </div>
                   </div>
                   <div class="d-flex flex-column align-items-md-end">
                     <h5 class="fw-bold mb-2" style="color: #b22b1d;">₦{{ Number(order.product_price).toLocaleString() }}</h5>
-                    <p v-if="!order.status.includes('Completed')" class="small text-secondary fw-bold mb-0">Awaiting Buyer Confirmation</p>
-                    <p v-else class="small text-success fw-bold mb-0">Funds added to wallet</p>
+                    <p v-if="!order.status.includes('Completed')" class="small text-secondary fw-bold mb-0 no-print">Awaiting Buyer Confirmation</p>
+                    <p v-else class="small text-success fw-bold mb-0 no-print">Funds added to wallet</p>
                   </div>
                 </div>
               </div>
@@ -231,14 +299,14 @@
               </div>
 
               <div v-else class="d-flex flex-column gap-3">
-                <div v-for="order in purchases" :key="order.id" class="bg-white p-3 shadow-sm d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3" style="border-radius: 16px; border: 1px solid rgba(0,0,0,0.05);">
+                <div v-for="order in purchases" :key="order.id" class="bg-white p-3 shadow-sm d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 print-row" style="border-radius: 16px; border: 1px solid rgba(0,0,0,0.05);">
                   <div class="d-flex align-items-center gap-3">
-                    <img :src="order.product_image || 'https://via.placeholder.com/60'" class="rounded object-fit-cover shadow-sm" style="width: 60px; height: 60px;">
+                    <img :src="order.product_image || 'https://via.placeholder.com/60'" class="rounded object-fit-cover shadow-sm no-print" style="width: 60px; height: 60px;">
                     <div>
                       <h6 class="fw-bold text-dark mb-1">{{ order.product_name }}</h6>
-                      
+                      <small class="d-none print-only-text d-block mb-1">{{ new Date(order.created_at).toLocaleString() }}</small>
                       <span class="badge" :class="{'bg-success': order.status.includes('Completed'), 'bg-danger': order.status.includes('Disputed'), 'bg-warning text-dark border border-warning': !order.status.includes('Completed') && !order.status.includes('Disputed')}">
-                        <i class="bi" :class="{'bi-check-circle-fill': order.status.includes('Completed'), 'bi-shield-lock-fill': order.status.includes('Disputed'), 'bi-lock-fill': !order.status.includes('Completed') && !order.status.includes('Disputed')}"></i> 
+                        <i class="bi no-print" :class="{'bi-check-circle-fill': order.status.includes('Completed'), 'bi-shield-lock-fill': order.status.includes('Disputed'), 'bi-lock-fill': !order.status.includes('Completed') && !order.status.includes('Disputed')}"></i> 
                         {{ order.status }}
                       </span>
                     </div>
@@ -247,7 +315,7 @@
                   <div class="d-flex flex-column align-items-md-end">
                     <h5 class="fw-bold mb-2" style="color: #b22b1d;">₦{{ Number(order.product_price).toLocaleString() }}</h5>
                     
-                    <div v-if="!order.status.includes('Completed') && !order.status.includes('Disputed')" class="d-flex gap-2">
+                    <div v-if="!order.status.includes('Completed') && !order.status.includes('Disputed')" class="d-flex gap-2 no-print">
                       <button @click="confirmDelivery(order)" class="btn btn-sm fw-bold rounded-pill px-3 shadow-sm" style="background-color: #10b981; color: white;" :disabled="isProcessing">
                         <span v-if="isProcessing" class="spinner-border spinner-border-sm me-1"></span>
                         <i v-else class="bi bi-box-seam me-1"></i> Confirm Received
@@ -308,7 +376,12 @@ const editForm = ref({})
 const displayPictureFile = ref(null)
 const coverPictureFile = ref(null)
 
-// Computed Helpers for robust checking
+// KYC STATE
+const idCardFile = ref(null)
+const kycDocType = ref('')
+const isUploadingKYC = ref(false)
+
+// Computed Helpers
 const isVendor = computed(() => {
   if (!profile.value?.role) return false;
   return ['seller', 'external'].includes(profile.value.role.toLowerCase());
@@ -329,42 +402,40 @@ const handleFileUpload = (event, type) => {
 
 const forceRefresh = () => window.location.reload()
 
+// PRINT LOGIC
+const printHistory = () => {
+  window.print();
+}
+
 onMounted(async () => {
   isLoading.value = true
   const profileId = route.params.id
 
   try {
-    // 1. Fetch Profile
     const { data: userProfile, error: profileErr } = await supabase.from('profiles').select('*').eq('id', profileId).single()
     
     if (!profileErr) {
       profile.value = userProfile
 
-      // 2. Fetch All Products (Always fetch, just in case)
       const { data: products } = await supabase.from('products').select('*').eq('seller_id', profileId).order('created_at', { ascending: false })
       listings.value = products || []
 
-      // 3. Fetch All Sales (Orders where this profile is the seller)
       const { data: sales } = await supabase.from('orders').select('*').eq('seller_id', profileId).order('created_at', { ascending: false })
       allSales.value = sales || []
 
-      // 4. Session Checking
       const { data: sessionData } = await supabase.auth.getSession()
       if (sessionData.session && sessionData.session.user.id === profileId) {
         isOwnProfile.value = true
         
-        // Fetch Purchases (Orders where this profile is the buyer)
         const { data: buyerOrders } = await supabase.from('orders').select('*').eq('buyer_id', profileId).order('created_at', { ascending: false })
         purchases.value = buyerOrders || []
 
-        // Decide initial tab
         if (isVendor.value) {
-            activeTab.value = 'sales' // Land them on their management hub
+            activeTab.value = 'sales' 
         } else {
             activeTab.value = 'purchases'
         }
 
-        // Hydrate Edit Form
         editForm.value = {
           first_name: profile.value.first_name || '',
           last_name: profile.value.last_name || '',
@@ -380,7 +451,7 @@ onMounted(async () => {
           cover_image: profile.value.cover_image || ''
         }
       } else {
-         activeTab.value = 'listings' // Default to storefront for visitors
+         activeTab.value = 'listings' 
       }
     }
   } catch (error) {
@@ -390,6 +461,41 @@ onMounted(async () => {
   }
 })
 
+const submitKYC = async () => {
+  if (!idCardFile.value || !kycDocType.value) return alert("Please select a document type and an image file.");
+  isUploadingKYC.value = true;
+  
+  try {
+    const fileExt = idCardFile.value.name.split('.').pop()
+    const fileName = `kyc_${profile.value.id}_${Date.now()}.${fileExt}`
+    
+    const { error: uploadError } = await supabase.storage.from('kyc-documents').upload(fileName, idCardFile.value)
+    if (uploadError) throw new Error("Image upload failed: " + uploadError.message)
+
+    const { data: publicUrlData } = supabase.storage.from('kyc-documents').getPublicUrl(fileName)
+
+    const { error: dbError } = await supabase.from('profiles')
+      .update({ 
+        id_card_url: publicUrlData.publicUrl,
+        kyc_doc_type: kycDocType.value 
+      })
+      .eq('id', profile.value.id)
+
+    if (dbError) throw dbError
+
+    alert(`${kycDocType.value} submitted successfully! Please wait for Admin approval.`);
+    profile.value.id_card_url = publicUrlData.publicUrl; 
+    profile.value.kyc_doc_type = kycDocType.value;
+    idCardFile.value = null;
+
+  } catch (error) {
+    console.error("KYC Error:", error)
+    alert("Error: " + error.message)
+  } finally {
+    isUploadingKYC.value = false;
+  }
+}
+
 const confirmDelivery = async (order) => {
   if (!confirm(`Are you sure you have physically received "${order.product_name}"? \n\nClicking OK will instantly release the funds to the seller's wallet.`)) return;
   
@@ -398,69 +504,43 @@ const confirmDelivery = async (order) => {
     const { error: orderError } = await supabase.from('orders').update({ status: 'Completed (Funds Released)' }).eq('id', order.id);
     if (orderError) throw orderError;
 
-    const { data: seller, error: sellerError } = await supabase.from('profiles').select('wallet_balance').eq('id', order.seller_id).single();
+    const { data: seller, error: sellerError } = await supabase.from('profiles').select('wallet_balance, escrow_balance').eq('id', order.seller_id).single();
     if (sellerError) throw sellerError;
 
-    const newBalance = Number(seller.wallet_balance || 0) + Number(order.product_price);
-    const { error: walletError } = await supabase.from('profiles').update({ wallet_balance: newBalance }).eq('id', order.seller_id);
-    if (walletError) throw walletError;
+    const amountToTransfer = Number(order.product_price);
+    const currentEscrow = Number(seller.escrow_balance || 0);
+    const currentWallet = Number(seller.wallet_balance || 0);
 
-    await supabase.from('transactions').insert([{
-      profile_id: order.seller_id,
-      amount: order.product_price,
-      type: 'credit',
-      description: `Escrow Released: Payment for ${order.product_name}`
-    }]);
+    const newEscrowBalance = Math.max(0, currentEscrow - amountToTransfer); 
+    const newWalletBalance = currentWallet + amountToTransfer;
+
+    const { error: balanceError } = await supabase.from('profiles').update({ wallet_balance: newWalletBalance, escrow_balance: newEscrowBalance }).eq('id', order.seller_id);
+    if (balanceError) throw balanceError;
+
+    await supabase.from('transactions').insert([{ profile_id: order.seller_id, amount: amountToTransfer, type: 'credit', description: `Escrow Released: Payment for ${order.product_name}` }]);
 
     alert("Success! The funds have been released to the seller.");
-    order.status = 'Completed (Funds Released)';
+    order.status = 'Completed (Funds Released)'; 
     
-  } catch (error) {
-    alert("Error releasing funds: " + error.message);
-  } finally {
-    isProcessing.value = false;
-  }
+  } catch (error) { alert("Error releasing funds: " + error.message); } finally { isProcessing.value = false; }
 };
 
-// ==========================================
-// NEW: REPORT ISSUE / FREEZE TRANSACTION
-// ==========================================
 const reportIssue = async (order) => {
   const reason = prompt("Please describe the issue (e.g., Seller didn't show up, Item was broken). This will freeze the funds and notify the Admin.");
   if (!reason || reason.trim() === '') return; 
 
   isProcessing.value = true;
-
   try {
-    // 1. Change the order status to 'Disputed'
-    const { error: orderError } = await supabase
-      .from('orders')
-      .update({ status: 'Disputed' })
-      .eq('id', order.id);
-
+    const { error: orderError } = await supabase.from('orders').update({ status: 'Disputed' }).eq('id', order.id);
     if (orderError) throw orderError;
 
-    // 2. Automatically create a Support Ticket
-    const { error: ticketError } = await supabase
-      .from('support_tickets')
-      .insert([{
-        user_id: profile.value.id,
-        subject: `URGENT ESCROW DISPUTE: Order #${String(order.id).substring(0,8)}`,
-        message: `Buyer reported an issue and froze the transaction. Reason: "${reason}". Please contact both parties to resolve.`,
-        status: 'Open'
-      }]);
-
+    const { error: ticketError } = await supabase.from('support_tickets').insert([{ user_id: profile.value.id, subject: `URGENT ESCROW DISPUTE: Order #${String(order.id).substring(0,8)}`, message: `Buyer reported an issue and froze the transaction. Reason: "${reason}". Please contact both parties to resolve.`, status: 'Open' }]);
     if (ticketError) throw ticketError;
 
     alert("Transaction frozen! The Escrow funds are locked and an Admin has been notified.");
-    order.status = 'Disputed'; // Update UI instantly
+    order.status = 'Disputed'; 
 
-  } catch (error) {
-    console.error("Dispute Error:", error);
-    alert("Could not report issue: " + error.message);
-  } finally {
-    isProcessing.value = false;
-  }
+  } catch (error) { alert("Could not report issue: " + error.message); } finally { isProcessing.value = false; }
 };
 
 const saveProfile = async () => {
@@ -522,4 +602,37 @@ input, textarea, select { font-size: 16px !important; }
 
 div[style*="overflow-x: auto"]::-webkit-scrollbar { height: 4px; }
 div[style*="overflow-x: auto"]::-webkit-scrollbar-thumb { background: #e9ecef; border-radius: 4px; }
+
+/* PRINT SPECIFIC CSS */
+@media print {
+  /* Hide EVERYTHING by default */
+  body * { visibility: hidden; }
+  
+  /* Hide specific UI elements */
+  .no-print { display: none !important; }
+  
+  /* Show only the printable container */
+  .printable-container, .printable-container * { visibility: visible; }
+  
+  /* Show the custom print header and text */
+  .print-only-header { display: block !important; }
+  .print-only-text { display: block !important; }
+  
+  /* Re-position the printable area to the top left of the physical paper */
+  .printable-container {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  
+  /* Format rows to look like a list/invoice */
+  .print-row {
+    border: 1px solid #dee2e6 !important;
+    margin-bottom: 10px !important;
+    box-shadow: none !important;
+  }
+}
 </style>

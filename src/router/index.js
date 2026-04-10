@@ -10,6 +10,8 @@ import MessagesView from '../views/MessagesView.vue'
 import AboutView from '../views/AboutView.vue'
 import AdminView from '../views/AdminView.vue'
 import SupportView from '../views/SupportView.vue'
+import TermsView from '../views/TermsView.vue'
+import NotificationsView from '../views/NotificationsView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -24,7 +26,9 @@ const router = createRouter({
     { path: '/messages', name: 'messages', component: MessagesView },
     { path: '/about', name: 'about', component: AboutView },
     { path: '/admin', name: 'admin', component: AdminView },
-    { path: '/support', name: 'support', component: SupportView }
+    { path: '/support', name: 'support', component: SupportView },
+    { path: '/terms', name: 'terms', component: TermsView },
+    { path: '/notifications', name: 'notifications', component: NotificationsView }
   ],
   scrollBehavior() { 
     return { top: 0 } 
@@ -35,8 +39,8 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   const { data: { session } } = await supabase.auth.getSession()
   
-  // Force login for protected routes
-  if (to.name !== 'auth' && !session) {
+  // Expose Terms page publicly if needed, but force login for others
+  if (to.name !== 'auth' && to.name !== 'terms' && !session) {
     next({ name: 'auth' })
   } 
   // Prevent logged-in users from seeing login screen
@@ -49,11 +53,9 @@ router.beforeEach(async (to, from, next) => {
     if (data && data.role === 'admin') {
       next()
     } else {
-      next({ name: 'shop' }) // Kick non-admins back to the feed
+      next({ name: 'shop' })
     }
-  }
-  // Allow normal navigation
-  else {
+  } else {
     next()
   }
 })

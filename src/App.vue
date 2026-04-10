@@ -17,12 +17,18 @@
           <router-link to="/cart" class="nav-link-stitch" active-class="nav-active">Cart</router-link>
           <router-link to="/about" class="nav-link-stitch" active-class="nav-active">About</router-link>
           
-          <router-link v-if="userRole === 'admin'" to="/admin" class="nav-link-stitch text-warning fw-bold" active-class="nav-active" style="letter-spacing: 0.05em;">
+          <router-link v-if="userRole === 'admin'" to="/admin" class="nav-link-stitch text-warning fw-bold position-relative" active-class="nav-active" style="letter-spacing: 0.05em;">
             <i class="bi bi-shield-lock-fill me-1"></i> Admin
+            <span v-if="adminAlerts > 0" class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"></span>
           </router-link>
         </div>
         
         <div class="d-flex align-items-center gap-4">
+          <router-link to="/notifications" class="text-white position-relative text-decoration-none">
+            <i class="bi bi-bell-fill fs-5"></i>
+            <span v-if="bellCount > 0" class="position-absolute translate-middle badge rounded-pill" style="background-color: #b22b1d; top: 0px; left: 15px; font-size: 0.6rem; color: white;">{{ bellCount }}</span>
+          </router-link>
+
           <router-link to="/cart" class="text-white position-relative text-decoration-none">
             <i class="bi bi-cart3 fs-5"></i>
             <span v-if="cartCount > 0" class="position-absolute translate-middle badge rounded-pill" style="background-color: #b22b1d; top: 0px; left: 15px; font-size: 0.6rem; color: white;">{{ cartCount }}</span>
@@ -50,8 +56,9 @@
         </router-link>
         
         <div class="d-flex align-items-center gap-3">
-          <router-link to="/about" class="text-white text-decoration-none small fw-bold">
-            <i class="bi bi-info-circle-fill me-1"></i>About
+          <router-link to="/notifications" class="text-white text-decoration-none position-relative me-2">
+            <i class="bi bi-bell-fill fs-5"></i>
+            <span v-if="bellCount > 0" class="position-absolute translate-middle badge rounded-pill" style="background-color: #b22b1d; top: 0px; left: 15px; font-size: 0.5rem; color: white; padding: 3px 5px;">{{ bellCount }}</span>
           </router-link>
           
           <button @click="handleSignOut" class="btn btn-sm text-white-50 p-0 border-0" title="Sign Out">
@@ -84,8 +91,9 @@
           <span class="d-block fw-bold text-uppercase" style="font-size: 0.6rem; letter-spacing: 0.05em;">Chat</span>
         </router-link>
 
-        <router-link v-if="userRole === 'admin'" to="/admin" class="nav-item text-center text-decoration-none" active-class="active-bottom-tab" style="color: #6b7280; flex: 1;">
+        <router-link v-if="userRole === 'admin'" to="/admin" class="nav-item text-center text-decoration-none position-relative" active-class="active-bottom-tab" style="color: #6b7280; flex: 1;">
           <i class="bi bi-shield-lock-fill fs-4 d-block mb-1"></i>
+          <span v-if="adminAlerts > 0" class="position-absolute p-1 bg-danger border border-light rounded-circle" style="top: 5px; right: 20px;"></span>
           <span class="d-block fw-bold text-uppercase" style="font-size: 0.6rem; letter-spacing: 0.05em;">Admin</span>
         </router-link>
 
@@ -116,25 +124,20 @@
           <div class="col-6 col-lg-2 offset-lg-2">
             <h6 class="text-white fw-bold mb-3 small text-uppercase" style="letter-spacing: 0.05em;">Marketplace</h6>
             <ul class="list-unstyled small text-white-50 fw-medium d-flex flex-column gap-2">
-              <li>Textbook Exchange</li>
-              <li>Dorm Essentials</li>
-              <li>Tech & Gadgets</li>
+              <li>Textbook Exchange</li><li>Dorm Essentials</li><li>Tech & Gadgets</li>
             </ul>
           </div>
           <div class="col-6 col-lg-2">
             <h6 class="text-white fw-bold mb-3 small text-uppercase" style="letter-spacing: 0.05em;">Institution</h6>
             <ul class="list-unstyled small text-white-50 fw-medium d-flex flex-column gap-2">
-              <li>University Policy</li>
-              <li>Safety Guidelines</li>
-              <li>Student Discounts</li>
+              <li>University Policy</li><li>Safety Guidelines</li><li>Student Discounts</li>
             </ul>
           </div>
           <div class="col-6 col-lg-2">
             <h6 class="text-white fw-bold mb-3 small text-uppercase" style="letter-spacing: 0.05em;">Support</h6>
             <ul class="list-unstyled small text-white-50 fw-medium d-flex flex-column gap-2">
-              <li>Knowledge Base</li>
-              <li>Submit a Ticket</li>
-              <li>Privacy Policy</li>
+              <li><router-link to="/terms" class="text-white-50 text-decoration-none">Terms & Conditions</router-link></li>
+              <li><router-link to="/support" class="text-white-50 text-decoration-none">Submit a Ticket</router-link></li>
             </ul>
           </div>
         </div>
@@ -160,6 +163,8 @@ const router = useRouter()
 const currentUser = ref(null)
 const userRole = ref('buyer')
 const cartCount = ref(0)
+const adminAlerts = ref(0)
+const bellCount = ref(0) 
 
 const updateCartCount = () => {
   try {
@@ -168,20 +173,42 @@ const updateCartCount = () => {
   } catch (e) { cartCount.value = 0 }
 }
 
+const fetchRoleAndAlerts = async (userId) => {
+  const { data } = await supabase.from('profiles').select('role').eq('id', userId).single()
+  if (data) {
+    userRole.value = data.role
+    if (data.role === 'admin') {
+      const { count: kycCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).not('id_card_url', 'is', null).eq('is_verified', false)
+      const { count: ticketCount } = await supabase.from('tickets').select('*', { count: 'exact', head: true }).eq('status', 'open')
+      const { count: payoutCount } = await supabase.from('transactions').select('*', { count: 'exact', head: true }).eq('type', 'debit').eq('status', 'Pending')
+      adminAlerts.value = (kycCount || 0) + (ticketCount || 0) + (payoutCount || 0)
+    }
+  }
+
+  const { count: unreadNotes } = await supabase.from('in_app_notifications').select('*', { count: 'exact', head: true }).eq('user_id', userId).eq('is_read', false)
+  bellCount.value = unreadNotes || 0
+}
+
 onMounted(async () => {
   const { data: { session } } = await supabase.auth.getSession()
   if (session) {
     currentUser.value = session.user
-    
-    const { data } = await supabase.from('profiles').select('role').eq('id', session.user.id).single()
-    if (data) userRole.value = data.role
+    await fetchRoleAndAlerts(session.user.id)
   }
   
   updateCartCount()
   window.addEventListener('storage', updateCartCount)
+  window.addEventListener('notifications_read', () => { bellCount.value = 0 })
   
-  supabase.auth.onAuthStateChange((event, session) => {
+  supabase.auth.onAuthStateChange(async (event, session) => {
     currentUser.value = session?.user || null
+    if (session?.user) {
+      await fetchRoleAndAlerts(session.user.id)
+    } else {
+      userRole.value = 'buyer'
+      adminAlerts.value = 0
+      bellCount.value = 0
+    }
     if (event === 'SIGNED_OUT') router.push('/auth')
   })
 })
@@ -207,7 +234,6 @@ const handleSignOut = async () => {
 .nav-item { transition: transform 0.2s ease, color 0.2s ease; }
 .active-bottom-tab { color: #082b59 !important; transform: translateY(-2px); }
 
-/* Hover effect for the Sign Out Button */
 .signout-btn:hover {
   background-color: rgba(255,255,255,0.2) !important;
   color: white !important;

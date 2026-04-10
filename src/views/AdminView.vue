@@ -1,21 +1,20 @@
 <template>
   <div class="container-fluid py-4 px-lg-5">
     
-    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3 no-print">
       <h2 class="fw-bold mb-0" style="color: #082b59;">Admin Command Center</h2>
       <span class="badge rounded-pill px-3 py-2 text-uppercase" style="background-color: #b22b1d; letter-spacing: 0.05em;">Restricted Access</span>
     </div>
 
-    <div v-if="isLoading" class="text-center py-5"><div class="spinner-border" style="color: #b22b1d;"></div></div>
+    <div v-if="isLoading" class="text-center py-5 no-print"><div class="spinner-border" style="color: #b22b1d;"></div></div>
 
-    <div v-else-if="!isAdmin" class="text-center py-5">
+    <div v-else-if="!isAdmin" class="text-center py-5 no-print">
       <i class="bi bi-exclamation-octagon-fill fs-1 mb-3 d-block" style="color: #b22b1d;"></i>
       <h3 class="fw-bold text-dark">Access Denied</h3>
-      <p class="text-secondary fw-medium">You do not have the required clearance to view this page.</p>
     </div>
 
     <div v-else>
-      <div class="row g-4 mb-5">
+      <div class="row g-4 mb-5 no-print">
         <div class="col-md-4">
           <div class="p-4 bg-white shadow-sm" style="border-radius: 16px; border: 1px solid rgba(0,0,0,0.05); border-left: 4px solid #082b59;">
             <h6 class="text-secondary fw-bold text-uppercase mb-2">Total Users</h6>
@@ -41,29 +40,86 @@
 
       <div class="overflow-hidden bg-white shadow-sm mb-5" style="border-radius: 16px; border: 1px solid rgba(0,0,0,0.05);">
         
-        <div class="d-flex overflow-auto border-bottom" style="background-color: #f8f9fa; -ms-overflow-style: none; scrollbar-width: none;">
+        <div class="d-flex overflow-auto border-bottom no-print" style="background-color: #f8f9fa; -ms-overflow-style: none; scrollbar-width: none;">
           <button @click="activeTab = 'payouts'" class="btn rounded-0 px-4 py-3 fw-bold border-0 text-nowrap" :style="activeTab === 'payouts' ? 'color: #082b59; border-bottom: 3px solid #082b59 !important; background: white;' : 'color: #6b7280;'">Payout Desk</button>
           <button @click="activeTab = 'approvals'" class="btn rounded-0 px-4 py-3 fw-bold border-0 text-nowrap" :style="activeTab === 'approvals' ? 'color: #082b59; border-bottom: 3px solid #082b59 !important; background: white;' : 'color: #6b7280;'">Product Approvals</button>
-          
           <button @click="activeTab = 'kyc'" class="btn rounded-0 px-4 py-3 fw-bold border-0 text-nowrap" :style="activeTab === 'kyc' ? 'color: #082b59; border-bottom: 3px solid #082b59 !important; background: white;' : 'color: #6b7280;'">
-            KYC Approvals 
-            <span v-if="pendingKYC.length > 0" class="badge rounded-pill ms-2" style="background-color: #b22b1d;">{{ pendingKYC.length }}</span>
+            KYC Approvals <span v-if="pendingKYC.length > 0" class="badge rounded-pill ms-2" style="background-color: #b22b1d;">{{ pendingKYC.length }}</span>
           </button>
-          
           <button @click="activeTab = 'users'" class="btn rounded-0 px-4 py-3 fw-bold border-0 text-nowrap" :style="activeTab === 'users' ? 'color: #082b59; border-bottom: 3px solid #082b59 !important; background: white;' : 'color: #6b7280;'">User Management</button>
-          
           <button @click="activeTab = 'tickets'" class="btn rounded-0 px-4 py-3 fw-bold border-0 text-nowrap" :style="activeTab === 'tickets' ? 'color: #082b59; border-bottom: 3px solid #082b59 !important; background: white;' : 'color: #6b7280;'">
-            Support Tickets
-            <span v-if="openTicketsCount > 0" class="badge rounded-pill ms-2" style="background-color: #b22b1d;">{{ openTicketsCount }}</span>
+            Support Tickets <span v-if="openTicketsCount > 0" class="badge rounded-pill ms-2" style="background-color: #b22b1d;">{{ openTicketsCount }}</span>
           </button>
-
-          <button @click="activeTab = 'team'" class="btn rounded-0 px-4 py-3 fw-bold border-0 text-nowrap" :style="activeTab === 'team' ? 'color: #082b59; border-bottom: 3px solid #082b59 !important; background: white;' : 'color: #6b7280;'">Team Settings</button>
-          <button @click="activeTab = 'logs'" class="btn rounded-0 px-4 py-3 fw-bold border-0 text-nowrap" :style="activeTab === 'logs' ? 'color: #082b59; border-bottom: 3px solid #082b59 !important; background: white;' : 'color: #6b7280;'">Audit Logs</button>
+          
+          <button @click="activeTab = 'broadcast'" class="btn rounded-0 px-4 py-3 fw-bold border-0 text-nowrap" :style="activeTab === 'broadcast' ? 'color: #082b59; border-bottom: 3px solid #082b59 !important; background: white;' : 'color: #6b7280;'"><i class="bi bi-megaphone-fill me-2"></i>Broadcast Desk</button>
+          
+          <button @click="clearLogFilter" class="btn rounded-0 px-4 py-3 fw-bold border-0 text-nowrap" :style="activeTab === 'logs' ? 'color: #082b59; border-bottom: 3px solid #082b59 !important; background: white;' : 'color: #6b7280;'">Audit Logs</button>
         </div>
 
-        <div class="p-4">
+        <div class="p-4" id="printable-area">
           
-          <div v-if="activeTab === 'payouts'">
+          <div v-if="activeTab === 'broadcast'" class="no-print">
+            <h5 class="fw-bold mb-4 text-dark"><i class="bi bi-send-fill me-2"></i>Send Platform Announcements</h5>
+            <div class="row">
+              <div class="col-lg-8">
+                <form @submit.prevent="sendBroadcast" class="bg-light p-4 rounded-4 border">
+                  
+                  <div class="mb-3">
+                    <label class="form-label fw-bold text-dark small text-uppercase">Target Audience</label>
+                    <select v-model="broadcastForm.target" class="form-select bg-white border-0 fw-medium" required>
+                      <option value="all">All Registered Users</option>
+                      <option value="buyer">Buyers Only</option>
+                      <option value="seller">Vendors (Sellers) Only</option>
+                      <option value="specific">Specific User Email</option>
+                    </select>
+                  </div>
+
+                  <div v-if="broadcastForm.target === 'specific'" class="mb-3">
+                    <label class="form-label fw-bold text-dark small text-uppercase">Specific Email Address</label>
+                    <input type="email" v-model="broadcastForm.specificEmail" class="form-control bg-white border-0" placeholder="user@newgate.edu">
+                  </div>
+
+                  <div class="mb-3">
+                    <label class="form-label fw-bold text-dark small text-uppercase">Subject / Title</label>
+                    <input type="text" v-model="broadcastForm.subject" class="form-control bg-white border-0 fw-bold" placeholder="e.g., Important Security Update" required>
+                  </div>
+
+                  <div class="mb-4">
+                    <label class="form-label fw-bold text-dark small text-uppercase">Message</label>
+                    <textarea v-model="broadcastForm.message" class="form-control bg-white border-0" rows="6" placeholder="Type your announcement here..." required></textarea>
+                  </div>
+
+                  <div class="d-flex gap-4 mb-4 p-3 bg-white rounded-3 border">
+                    <div class="form-check form-switch">
+                      <input class="form-check-input" type="checkbox" v-model="broadcastForm.sendInApp" id="inAppCheck">
+                      <label class="form-check-label fw-bold text-dark" for="inAppCheck"><i class="bi bi-bell-fill text-warning me-1"></i> Send In-App Notification (Bell Icon)</label>
+                    </div>
+                    <div class="form-check form-switch">
+                      <input class="form-check-input" type="checkbox" v-model="broadcastForm.sendEmail" id="emailCheck">
+                      <label class="form-check-label fw-bold text-dark" for="emailCheck"><i class="bi bi-envelope-fill text-primary me-1"></i> Send Email to Inbox</label>
+                    </div>
+                  </div>
+
+                  <button type="submit" class="btn w-100 fw-bold py-3 rounded-pill shadow-sm" style="background-color: #082b59; color: white;" :disabled="isProcessing">
+                    <span v-if="isProcessing" class="spinner-border spinner-border-sm me-2"></span>
+                    <i v-else class="bi bi-rocket-takeoff-fill me-2"></i> Launch Broadcast
+                  </button>
+                </form>
+              </div>
+              <div class="col-lg-4">
+                <div class="bg-warning-subtle p-4 rounded-4 border border-warning">
+                  <h6 class="fw-bold text-dark"><i class="bi bi-info-circle-fill me-1"></i> Broadcast Rules</h6>
+                  <ul class="small text-dark mb-0 ps-3">
+                    <li class="mb-2">In-App Notifications appear instantly for users.</li>
+                    <li class="mb-2">Emails are sent to the queue and processed automatically in the background by the Edge Function.</li>
+                    <li>Avoid sending emails to "All Users" frequently to prevent spam flagging.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="activeTab === 'payouts'" class="no-print">
             <h5 class="fw-bold mb-4 text-dark">Action Required: Bank Transfers</h5>
             <div v-if="pendingWithdrawals.length === 0" class="text-center text-muted py-5"><i class="bi bi-check-circle fs-1 text-success mb-3 d-block"></i><h5 class="fw-bold">All clear! No pending payouts.</h5></div>
             <div v-else class="table-responsive">
@@ -81,7 +137,7 @@
             </div>
           </div>
 
-          <div v-if="activeTab === 'approvals'">
+          <div v-if="activeTab === 'approvals'" class="no-print">
             <h5 class="fw-bold mb-4 text-dark">Review New Merchandise</h5>
             <div v-if="pendingProducts.length === 0" class="text-center text-muted py-5"><h5 class="fw-bold">No pending products in the queue.</h5></div>
             <div v-else class="table-responsive">
@@ -109,38 +165,34 @@
             </div>
           </div>
 
-          <div v-if="activeTab === 'kyc'">
+          <div v-if="activeTab === 'kyc'" class="no-print">
             <h5 class="fw-bold mb-4 text-dark">Identity Verification (KYC)</h5>
-            
             <div v-if="selectedKYCUser" class="p-4 mb-4" style="background-color: #f8f9fa; border-radius: 16px; border: 1px solid rgba(0,0,0,0.1);">
               <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
-                <h5 class="fw-bold m-0 text-dark">Reviewing ID for: <span style="color: #082b59;">{{ selectedKYCUser.first_name || selectedKYCUser.business_name }}</span></h5>
+                <h5 class="fw-bold m-0 text-dark">Reviewing Document for: <span style="color: #082b59;">{{ selectedKYCUser.first_name || selectedKYCUser.business_name }}</span></h5>
                 <button class="btn-close" @click="selectedKYCUser = null"></button>
               </div>
-              
               <div class="row g-4 align-items-stretch">
                 <div class="col-lg-7 text-center">
                   <div class="bg-white p-2 border rounded" style="box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
                     <img :src="selectedKYCUser.id_card_url" class="img-fluid rounded" style="max-height: 400px; object-fit: contain;">
                   </div>
                 </div>
-                
                 <div class="col-lg-5 d-flex flex-column">
                   <div class="bg-white p-4 border rounded mb-4 flex-grow-1" style="box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
                     <h6 class="fw-bold text-secondary text-uppercase mb-3" style="letter-spacing: 0.05em; font-size: 0.8rem;">User Information</h6>
                     <ul class="list-unstyled mb-0 d-flex flex-column gap-3">
                       <li><small class="text-secondary d-block">Username</small> <strong class="text-dark">@{{ selectedKYCUser.username }}</strong></li>
                       <li><small class="text-secondary d-block">Email Address</small> <strong class="text-dark">{{ selectedKYCUser.email || 'Not provided' }}</strong></li>
-                      <li><small class="text-secondary d-block">Account Role</small> <strong class="text-dark text-uppercase badge bg-light border text-secondary">{{ selectedKYCUser.role }}</strong></li>
+                      <li><small class="text-secondary d-block">Document Type</small> <strong class="text-dark text-uppercase badge bg-info text-dark border">{{ selectedKYCUser.kyc_doc_type || 'ID Card' }}</strong></li>
                     </ul>
                   </div>
-                  
                   <div class="d-flex gap-2">
                     <button @click="approveKYC(selectedKYCUser)" class="btn flex-grow-1 rounded-pill fw-bold py-2" style="background-color: #10b981; color: white;" :disabled="isProcessing">
-                      <i class="bi bi-check-circle me-1"></i> Approve Identity
+                      <i class="bi bi-check-circle me-1"></i> Approve
                     </button>
                     <button @click="rejectKYC(selectedKYCUser)" class="btn btn-outline-danger flex-grow-1 rounded-pill fw-bold py-2" :disabled="isProcessing">
-                      <i class="bi bi-x-circle me-1"></i> Reject & Reset
+                      <i class="bi bi-x-circle me-1"></i> Reject
                     </button>
                   </div>
                 </div>
@@ -154,27 +206,20 @@
             
             <div v-else-if="!selectedKYCUser" class="table-responsive">
               <table class="table align-middle">
-                <thead class="bg-light text-secondary small text-uppercase">
-                  <tr><th class="py-3 border-0 rounded-start">User Info</th><th class="py-3 border-0">Role</th><th class="py-3 border-0">Status</th><th class="py-3 border-0 text-end rounded-end">Action</th></tr>
-                </thead>
+                <thead class="bg-light text-secondary small text-uppercase"><tr><th class="py-3 border-0 rounded-start">User Info</th><th class="py-3 border-0">Role</th><th class="py-3 border-0">Status</th><th class="py-3 border-0 text-end rounded-end">Action</th></tr></thead>
                 <tbody>
                   <tr v-for="user in pendingKYC" :key="user.id">
-                    <td class="py-3">
-                      <div class="fw-bold text-dark">{{ user.first_name || user.business_name || 'Unknown' }}</div>
-                      <small class="text-secondary">@{{ user.username }}</small>
-                    </td>
+                    <td class="py-3"><div class="fw-bold text-dark">{{ user.first_name || user.business_name || 'Unknown' }}</div><small class="text-secondary">@{{ user.username }}</small></td>
                     <td><span class="badge" style="background-color: #082b59;">{{ user.role.toUpperCase() }}</span></td>
                     <td><span class="badge bg-warning-subtle text-warning border border-warning">Pending Review</span></td>
-                    <td class="text-end">
-                      <button @click="selectedKYCUser = user" class="btn btn-sm text-white fw-bold rounded-pill px-4 py-2 shadow-sm" style="background-color: #082b59;">Review Document</button>
-                    </td>
+                    <td class="text-end"><button @click="selectedKYCUser = user" class="btn btn-sm text-white fw-bold rounded-pill px-4 py-2 shadow-sm" style="background-color: #082b59;">Review Document</button></td>
                   </tr>
                 </tbody>
               </table>
             </div>
           </div>
 
-          <div v-if="activeTab === 'users'">
+          <div v-if="activeTab === 'users'" class="no-print">
             <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
               <h5 class="fw-bold mb-0 text-dark">User Database</h5>
               <select class="form-select w-auto bg-light border-0 fw-bold text-dark" v-model="userFilter">
@@ -188,10 +233,7 @@
                 <thead class="bg-light text-secondary small text-uppercase"><tr><th class="py-3 border-0 rounded-start">User</th><th class="py-3 border-0">Role</th><th class="py-3 border-0">Status</th><th class="py-3 border-0">KYC</th><th class="py-3 border-0 text-end rounded-end">Actions</th></tr></thead>
                 <tbody>
                   <tr v-for="user in filteredUsers" :key="user.id">
-                    <td class="py-3">
-                      <div class="fw-bold text-dark" :class="{'text-decoration-line-through text-muted': user.status === 'deleted'}">{{ user.business_name || user.first_name || 'Anonymous' }}</div>
-                      <small class="text-secondary fw-medium">@{{ user.username || 'user' }}</small>
-                    </td>
+                    <td class="py-3"><div class="fw-bold text-dark" :class="{'text-decoration-line-through text-muted': user.status === 'deleted'}">{{ user.business_name || user.first_name || 'Anonymous' }}</div><small class="text-secondary fw-medium">@{{ user.username || 'user' }}</small></td>
                     <td><span class="badge" :style="user.role === 'seller' ? 'background-color: #082b59;' : 'background-color: #6b7280;'">{{ user.role.toUpperCase() }}</span></td>
                     <td>
                       <span v-if="user.status === 'active'" class="badge bg-success-subtle text-success">Active</span>
@@ -208,9 +250,11 @@
                       <div class="dropdown position-relative" v-if="user.status !== 'deleted'">
                         <button @click="toggleDropdown(user.id, $event)" class="btn btn-sm btn-light border fw-bold rounded-pill dropdown-toggle" type="button" :disabled="isProcessing">Actions</button>
                         <ul class="dropdown-menu dropdown-menu-end shadow border-0" :class="{ 'show d-block': openDropdownId === user.id }" style="position: absolute; z-index: 1050; margin-top: 5px;">
+                          <li><button @click="viewUserLogs(user.username)" class="dropdown-item text-dark fw-bold py-2"><i class="bi bi-file-text-fill me-2"></i>View Activity Logs</button></li>
+                          <li><hr class="dropdown-divider"></li>
+                          <li><button v-if="!user.is_verified" @click="forceVerifyUser(user)" class="dropdown-item text-primary fw-bold py-2"><i class="bi bi-shield-fill-check me-2"></i>Force Verify</button></li>
                           <li><button v-if="user.status !== 'active'" @click="activateUser(user)" class="dropdown-item text-success fw-bold py-2"><i class="bi bi-check-circle me-2"></i>Activate / Unban</button></li>
                           <li><button v-if="user.status === 'active'" @click="suspendUser(user)" class="dropdown-item text-warning fw-bold py-2"><i class="bi bi-pause-circle me-2"></i>Suspend (Set Time)</button></li>
-                          <li><hr class="dropdown-divider"></li>
                           <li><button v-if="user.status !== 'banned'" @click="banUser(user)" class="dropdown-item text-danger fw-bold py-2"><i class="bi bi-slash-circle me-2"></i>Permanently Ban</button></li>
                           <li><button @click="deleteUser(user)" class="dropdown-item text-dark fw-black py-2"><i class="bi bi-trash3-fill me-2"></i>Delete Data & Account</button></li>
                         </ul>
@@ -223,15 +267,9 @@
             </div>
           </div>
 
-          <div v-if="activeTab === 'tickets'">
+          <div v-if="activeTab === 'tickets'" class="no-print">
             <h5 class="fw-bold mb-4 text-dark">Support & Dispute Resolution</h5>
-
-            <div v-if="tickets.length === 0" class="text-center text-muted py-5">
-              <i class="bi bi-inbox fs-1 text-secondary mb-3 d-block"></i>
-              <h5 class="fw-bold">Inbox Empty</h5>
-              <p class="text-secondary fw-medium">No active support tickets in the system.</p>
-            </div>
-
+            <div v-if="tickets.length === 0" class="text-center text-muted py-5"><i class="bi bi-inbox fs-1 text-secondary mb-3 d-block"></i><h5 class="fw-bold">Inbox Empty</h5></div>
             <div v-else class="accordion" id="ticketsAccordion">
               <div v-for="(ticket, index) in tickets" :key="ticket.id" class="accordion-item border-0 mb-3 bg-light rounded-3 overflow-hidden shadow-sm">
                 <h2 class="accordion-header">
@@ -246,22 +284,13 @@
                 <div :id="'ticket-' + index" class="accordion-collapse collapse" data-bs-parent="#ticketsAccordion">
                   <div class="accordion-body bg-white border-top">
                     <div class="d-flex justify-content-between align-items-start mb-3">
-                      <div>
-                        <p class="small text-secondary mb-0 fw-bold text-uppercase" style="letter-spacing: 0.05em;">Reported By</p>
-                        <p class="fw-bold text-dark mb-0">@{{ ticket.profiles?.username || 'Unknown' }} ({{ ticket.profiles?.role || 'user' }})</p>
-                      </div>
-                      <button @click="router.push(`/profile/${ticket.user_id}`)" class="btn btn-sm btn-outline-dark rounded-pill fw-bold">View Profile</button>
+                      <div><p class="small text-secondary mb-0 fw-bold text-uppercase">Reported By</p><p class="fw-bold text-dark mb-0">@{{ ticket.profiles?.username || 'Unknown' }}</p></div>
                     </div>
-                    
-                    <div class="p-3 bg-light rounded-3 mb-3">
-                      <p class="mb-0 fw-medium text-dark" style="white-space: pre-wrap;">{{ ticket.description }}</p>
-                    </div>
-
+                    <div class="p-3 bg-light rounded-3 mb-3"><p class="mb-0 fw-medium text-dark" style="white-space: pre-wrap;">{{ ticket.description }}</p></div>
                     <div class="d-flex justify-content-end gap-2">
                       <button v-if="ticket.status === 'open'" @click="resolveTicket(ticket.id)" class="btn" style="background-color: #10b981; color: white; font-weight: bold; border-radius: 999px; padding: 6px 20px;" :disabled="isProcessing">
                         <i class="bi bi-check-lg me-1"></i> Mark as Resolved
                       </button>
-                      <button v-else class="btn btn-secondary btn-sm rounded-pill fw-bold px-3" disabled><i class="bi bi-check-all me-1"></i> Resolved</button>
                     </div>
                   </div>
                 </div>
@@ -269,89 +298,18 @@
             </div>
           </div>
 
-          <div v-if="activeTab === 'team'">
-            <h5 class="fw-bold mb-4 text-dark border-bottom pb-3">Add Team Member</h5>
-            <form @submit.prevent="addTeamMember" class="row g-3 mb-5">
-              <div class="col-md-6">
-                <label class="form-label small fw-bold text-secondary">Full Name</label>
-                <input type="text" class="form-control" v-model="newTeam.name" style="background-color: #f3f4f6; border: none; border-radius: 8px; padding: 10px 15px;" required>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label small fw-bold text-secondary">Role / Title</label>
-                <input type="text" class="form-control" v-model="newTeam.role" placeholder="e.g. Lead Developer" style="background-color: #f3f4f6; border: none; border-radius: 8px; padding: 10px 15px;" required>
-              </div>
-              <div class="col-12">
-                <label class="form-label small fw-bold text-secondary">Professional Bio</label>
-                <textarea class="form-control" v-model="newTeam.bio" rows="3" style="background-color: #f3f4f6; border: none; border-radius: 8px; padding: 10px 15px;" required></textarea>
-              </div>
-              <div class="col-md-12">
-                <label class="form-label small fw-bold text-secondary">Profile Photo</label>
-                <input type="file" class="form-control" accept="image/*" @change="e => teamImageFile = e.target.files[0]" style="background-color: #f3f4f6; border: none; border-radius: 8px;" required>
-              </div>
-              
-              <div class="col-md-3">
-                <label class="form-label small fw-bold text-secondary"><i class="bi bi-github me-1"></i>GitHub URL</label>
-                <input type="url" class="form-control form-control-sm" v-model="newTeam.github_url" style="background-color: #f3f4f6; border: none; border-radius: 8px;">
-              </div>
-              <div class="col-md-3">
-                <label class="form-label small fw-bold text-secondary"><i class="bi bi-linkedin me-1"></i>LinkedIn URL</label>
-                <input type="url" class="form-control form-control-sm" v-model="newTeam.linkedin_url" style="background-color: #f3f4f6; border: none; border-radius: 8px;">
-              </div>
-              <div class="col-md-3">
-                <label class="form-label small fw-bold text-secondary"><i class="bi bi-twitter-x me-1"></i>X (Twitter) URL</label>
-                <input type="url" class="form-control form-control-sm" v-model="newTeam.twitter_url" style="background-color: #f3f4f6; border: none; border-radius: 8px;">
-              </div>
-              <div class="col-md-3">
-                <label class="form-label small fw-bold text-secondary"><i class="bi bi-envelope me-1"></i>Email Address</label>
-                <input type="email" class="form-control form-control-sm" v-model="newTeam.email" style="background-color: #f3f4f6; border: none; border-radius: 8px;">
-              </div>
-
-              <div class="col-12 text-end mt-4">
-                <button type="submit" class="btn fw-bold rounded-pill px-5" :disabled="isUploadingTeam" style="background-color: #082b59; color: white; border: none;">
-                  {{ isUploadingTeam ? 'Uploading...' : 'Publish to About Page' }}
-                </button>
-              </div>
-            </form>
-
-            <h5 class="fw-bold mb-4 border-bottom pb-3 text-dark">Current Roster</h5>
-            <div v-if="teamList.length === 0" class="text-center text-secondary py-4 fw-medium">No team members added yet.</div>
-            <div v-else class="table-responsive">
-              <table class="table align-middle">
-                <thead class="bg-light text-secondary small text-uppercase"><tr><th class="py-3 border-0 rounded-start">Member</th><th class="py-3 border-0">Role</th><th class="py-3 border-0">Links</th><th class="py-3 border-0 text-end rounded-end">Action</th></tr></thead>
-                <tbody>
-                  <tr v-for="member in teamList" :key="member.id">
-                    <td class="py-3">
-                      <div class="d-flex align-items-center">
-                        <img :src="member.image_url" class="rounded-circle me-3 object-fit-cover shadow-sm" style="width: 50px; height: 50px;">
-                        <span class="fw-bold text-dark">{{ member.name }}</span>
-                      </div>
-                    </td>
-                    <td><span class="badge" style="background-color: #082b59;">{{ member.role }}</span></td>
-                    <td>
-                      <div class="d-flex gap-3 text-secondary">
-                        <i v-if="member.github_url" class="bi bi-github"></i>
-                        <i v-if="member.linkedin_url" class="bi bi-linkedin"></i>
-                        <i v-if="member.twitter_url" class="bi bi-twitter-x"></i>
-                        <i v-if="member.email" class="bi bi-envelope"></i>
-                      </div>
-                    </td>
-                    <td class="text-end">
-                      <button @click="deleteTeamMember(member.id)" class="btn btn-sm btn-outline-danger fw-bold rounded-pill px-3" :disabled="isProcessing">Remove</button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
           <div v-if="activeTab === 'logs'">
-            <h5 class="fw-bold mb-4 text-dark">Admin Activity Log</h5>
-            <div v-if="auditLogs.length === 0" class="text-center text-secondary py-5 fw-medium">No admin actions recorded yet.</div>
+            <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+              <h5 class="fw-bold text-dark mb-0">System Activity Log <span v-if="logFilterUsername" class="badge bg-secondary ms-2">Filtered: @{{ logFilterUsername }}</span></h5>
+              <button @click="printLogs" class="btn btn-outline-dark btn-sm fw-bold rounded-pill no-print"><i class="bi bi-printer-fill me-1"></i> Print Report</button>
+            </div>
+            <div v-if="filteredLogs.length === 0" class="text-center text-secondary py-5 fw-medium no-print">No admin actions recorded yet.</div>
             <div v-else class="table-responsive">
-              <table class="table align-middle small">
+              <div class="d-none print-only-header text-center mb-4"><h3 class="fw-black text-dark">NUM BAZAAR</h3><h4>Official Audit Report</h4><p>Generated on: {{ new Date().toLocaleString() }}</p><p v-if="logFilterUsername">Specific Query: User @{{ logFilterUsername }}</p><hr></div>
+              <table class="table align-middle small table-bordered">
                 <thead class="bg-light text-secondary text-uppercase"><tr><th class="py-3 border-0 rounded-start">Timestamp</th><th class="py-3 border-0">Action</th><th class="py-3 border-0">Details</th><th class="py-3 border-0 text-end rounded-end">Admin</th></tr></thead>
                 <tbody>
-                  <tr v-for="log in auditLogs" :key="log.id">
+                  <tr v-for="log in filteredLogs" :key="log.id">
                     <td class="text-secondary py-3 fw-medium">{{ new Date(log.created_at).toLocaleString() }}</td>
                     <td><span class="badge bg-dark fw-bold">{{ log.action }}</span></td>
                     <td class="fw-semibold text-dark">{{ log.details }}</td>
@@ -387,41 +345,30 @@ const pendingWithdrawals = ref([])
 const pendingProducts = ref([])
 const allUsers = ref([])
 const auditLogs = ref([])
-const teamList = ref([])
-const tickets = ref([]) // NEW: Support Tickets Array
+const tickets = ref([]) 
 const userFilter = ref('all')
-
-const newTeam = ref({ name: '', role: '', bio: '', github_url: '', linkedin_url: '', twitter_url: '', email: '' })
-const teamImageFile = ref(null)
-const isUploadingTeam = ref(false)
-
-// KYC Specific State
+const logFilterUsername = ref(null)
 const selectedKYCUser = ref(null)
+
+// Broadcast Logic Variables
+const broadcastForm = ref({ target: 'all', specificEmail: '', subject: '', message: '', sendInApp: true, sendEmail: false })
 
 const filteredUsers = computed(() => {
   if (userFilter.value === 'all') return allUsers.value
   if (userFilter.value === 'buyer') return allUsers.value.filter(u => u.role === 'buyer')
-  if (userFilter.value === 'seller') return allUsers.value.filter(u => u.role === 'seller')
+  if (userFilter.value === 'seller') return allUsers.value.filter(u => u.role === 'seller' || u.role === 'external')
   if (userFilter.value === 'suspended') return allUsers.value.filter(u => u.status === 'suspended' || u.status === 'banned')
   if (userFilter.value === 'kyc_pending') return allUsers.value.filter(u => u.id_card_url && !u.is_verified)
   return allUsers.value
 })
 
-const pendingKYC = computed(() => {
-  return allUsers.value.filter(u => u.id_card_url && !u.is_verified)
-})
-
-// NEW: Computed count for Support Tickets
-const openTicketsCount = computed(() => {
-  return tickets.value.filter(t => t.status === 'open').length
-})
+const pendingKYC = computed(() => allUsers.value.filter(u => u.id_card_url && !u.is_verified))
+const openTicketsCount = computed(() => tickets.value.filter(t => t.status === 'open').length)
+const filteredLogs = computed(() => !logFilterUsername.value ? auditLogs.value : auditLogs.value.filter(log => log.details.includes(`@${logFilterUsername.value}`)))
 
 const toggleDropdown = (id, event) => { event.stopPropagation(); openDropdownId.value = openDropdownId.value === id ? null : id }
 const closeDropdown = () => { openDropdownId.value = null }
-
-const logAdminAction = async (actionType, actionDetails) => {
-  try { await supabase.from('admin_logs').insert([{ admin_id: currentAdminId.value, action: actionType, details: actionDetails }]) } catch (error) { console.error(error) }
-}
+const logAdminAction = async (actionType, actionDetails) => { try { await supabase.from('admin_logs').insert([{ admin_id: currentAdminId.value, action: actionType, details: actionDetails }]) } catch (e) {} }
 
 const fetchAdminData = async () => {
   isLoading.value = true
@@ -431,8 +378,7 @@ const fetchAdminData = async () => {
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', sessionData.session.user.id).single()
   if (!profile || profile.role !== 'admin') { isAdmin.value = false; isLoading.value = false; return }
   
-  isAdmin.value = true
-  currentAdminId.value = profile.id
+  isAdmin.value = true; currentAdminId.value = profile.id
 
   const { data: usersList, count: userCount } = await supabase.from('profiles').select('*', { count: 'exact' }).order('created_at', { ascending: false })
   allUsers.value = usersList || []
@@ -445,98 +391,97 @@ const fetchAdminData = async () => {
   const { data: products } = await supabase.from('products').select(`*, profiles(business_name, first_name)`).eq('is_approved', false).order('created_at', { ascending: false })
   pendingProducts.value = products || []
 
-  const { data: logs } = await supabase.from('admin_logs').select(`*, profiles(username)`).order('created_at', { ascending: false }).limit(100)
+  const { data: logs } = await supabase.from('admin_logs').select(`*, profiles(username)`).order('created_at', { ascending: false }).limit(500)
   auditLogs.value = logs || []
 
-  const { data: teamData } = await supabase.from('team_members').select('*').order('created_at', { ascending: true })
-  teamList.value = teamData || []
-
-  // NEW: Fetch Support Tickets
   const { data: ticketsData } = await supabase.from('tickets').select('*, profiles(username, role)').order('created_at', { ascending: false })
   tickets.value = ticketsData || []
 
   isLoading.value = false
 }
 
-// NEW: Resolve Ticket Function
+// BROADCAST SUBMISSION LOGIC
+const sendBroadcast = async () => {
+  if (!broadcastForm.value.sendInApp && !broadcastForm.value.sendEmail) return alert("You must select at least one delivery method (In-App or Email).")
+  
+  isProcessing.value = true
+  try {
+    let targetUsers = []
+    if (broadcastForm.value.target === 'all') targetUsers = allUsers.value
+    else if (broadcastForm.value.target === 'buyer') targetUsers = allUsers.value.filter(u => u.role === 'buyer')
+    else if (broadcastForm.value.target === 'seller') targetUsers = allUsers.value.filter(u => u.role === 'seller' || u.role === 'external')
+    else if (broadcastForm.value.target === 'specific') {
+      targetUsers = allUsers.value.filter(u => u.email === broadcastForm.value.specificEmail)
+      if (targetUsers.length === 0) throw new Error("No user found with that email address.")
+    }
+
+    if (targetUsers.length === 0) throw new Error("No users found in the selected target group.")
+
+    // 1. Send In-App Notifications
+    if (broadcastForm.value.sendInApp) {
+      const inAppPayload = targetUsers.map(u => ({
+        user_id: u.id,
+        title: broadcastForm.value.subject,
+        message: broadcastForm.value.message
+      }))
+      const { error } = await supabase.from('in_app_notifications').insert(inAppPayload)
+      if (error) throw error
+    }
+
+    // 2. Queue Emails for Edge Function
+    if (broadcastForm.value.sendEmail) {
+      const emailPayload = targetUsers.map(u => ({
+        email_address: u.email,
+        subject: broadcastForm.value.subject,
+        html_body: `<div style="font-family: sans-serif;"><h2>${broadcastForm.value.subject}</h2><p style="white-space: pre-wrap;">${broadcastForm.value.message}</p></div>`
+      }))
+      const { error } = await supabase.from('email_queue').insert(emailPayload)
+      if (error) throw error
+    }
+
+    await logAdminAction('System Broadcast', `Sent broadcast to ${broadcastForm.value.target} (${targetUsers.length} users).`)
+    alert(`Success! Broadcast dispatched to ${targetUsers.length} users.`)
+    
+    broadcastForm.value = { target: 'all', specificEmail: '', subject: '', message: '', sendInApp: true, sendEmail: false }
+
+  } catch (error) {
+    alert("Broadcast Error: " + error.message)
+  } finally {
+    isProcessing.value = false
+  }
+}
+
+// Admin Action Methods 
+const viewUserLogs = (username) => { closeDropdown(); logFilterUsername.value = username; activeTab.value = 'logs'; }
+const clearLogFilter = () => { logFilterUsername.value = null; activeTab.value = 'logs'; }
+const printLogs = () => { window.print(); }
 const resolveTicket = async (ticketId) => {
   if (!confirm("Close this ticket and mark it as resolved?")) return
   isProcessing.value = true
   try {
     await supabase.from('tickets').update({ status: 'resolved' }).eq('id', ticketId)
     await logAdminAction('Ticket Resolved', `Resolved support ticket ID: ${ticketId}`)
-    alert("Ticket resolved successfully.")
-    await fetchAdminData()
-  } catch (error) {
-    alert("Error resolving ticket: " + error.message)
-  } finally {
-    isProcessing.value = false
-  }
+    alert("Ticket resolved successfully."); await fetchAdminData()
+  } catch (error) { alert("Error resolving ticket: " + error.message) } finally { isProcessing.value = false }
 }
-
-// KYC Approvals Logic
 const approveKYC = async (user) => {
   if (!confirm(`Approve KYC for ${user.first_name || user.business_name}?`)) return;
   isProcessing.value = true
   try {
     await supabase.from('profiles').update({ is_verified: true }).eq('id', user.id)
-    await logAdminAction('KYC Verified', `Approved ID Card for @${user.username}`)
-    alert("User Identity Verified successfully!"); 
-    selectedKYCUser.value = null;
-    await fetchAdminData()
+    await logAdminAction('KYC Verified', `Approved ${user.kyc_doc_type || 'ID Card'} for @${user.username}`)
+    alert("User Identity Verified successfully!"); selectedKYCUser.value = null; await fetchAdminData()
   } catch (error) { alert("Error: " + error.message) } finally { isProcessing.value = false }
 }
-
 const rejectKYC = async (user) => {
-  if (!confirm(`Reject KYC for ${user.first_name || user.business_name}? They will need to re-upload their documents.`)) return;
+  if (!confirm(`Reject KYC for ${user.first_name || user.business_name}?`)) return;
   isProcessing.value = true
   try {
-    await supabase.from('profiles').update({ id_card_url: null }).eq('id', user.id)
-    await logAdminAction('KYC Rejected', `Rejected ID Card for @${user.username}`)
-    alert("KYC Rejected. User must re-upload their document."); 
-    selectedKYCUser.value = null;
-    await fetchAdminData()
+    await supabase.from('profiles').update({ id_card_url: null, kyc_doc_type: null }).eq('id', user.id)
+    await logAdminAction('KYC Rejected', `Rejected Document for @${user.username}`)
+    alert("KYC Rejected."); selectedKYCUser.value = null; await fetchAdminData()
   } catch (error) { alert("Error: " + error.message) } finally { isProcessing.value = false }
 }
-
-// Team Logic
-const addTeamMember = async () => {
-  if (!teamImageFile.value) return alert("Please select a profile picture.")
-  isUploadingTeam.value = true
-  try {
-    const fileExt = teamImageFile.value.name.split('.').pop()
-    const fileName = `team_${Date.now()}.${fileExt}`
-    const { error: uploadErr } = await supabase.storage.from('team-photos').upload(fileName, teamImageFile.value)
-    if (uploadErr) throw uploadErr
-
-    const { data: publicUrlData } = supabase.storage.from('team-photos').getPublicUrl(fileName)
-
-    const { error: dbErr } = await supabase.from('team_members').insert([{
-      name: newTeam.value.name, role: newTeam.value.role, bio: newTeam.value.bio, image_url: publicUrlData.publicUrl,
-      github_url: newTeam.value.github_url || null, linkedin_url: newTeam.value.linkedin_url || null, twitter_url: newTeam.value.twitter_url || null, email: newTeam.value.email || null
-    }])
-    if (dbErr) throw dbErr
-
-    await logAdminAction('Team Updated', `Added new team member: ${newTeam.value.name}`)
-    alert("Team Member added to the About Us page!")
-    
-    newTeam.value = { name: '', role: '', bio: '', github_url: '', linkedin_url: '', twitter_url: '', email: '' }
-    teamImageFile.value = null
-    await fetchAdminData()
-  } catch (error) { alert("Error: " + error.message) } finally { isUploadingTeam.value = false }
-}
-
-const deleteTeamMember = async (id) => {
-  if (!confirm("Remove this team member?")) return;
-  isProcessing.value = true
-  try {
-    await supabase.from('team_members').delete().eq('id', id)
-    await logAdminAction('Team Updated', `Removed a team member.`)
-    await fetchAdminData()
-  } catch (error) { alert("Error deleting team member.") } finally { isProcessing.value = false }
-}
-
-// Global Logic
 const markAsPaid = async (req) => {
   if (!confirm("Are you sure you have physically transferred this money?")) return;
   isProcessing.value = true
@@ -562,6 +507,16 @@ const rejectProduct = async (product) => {
     await logAdminAction('Product Rejected', `Deleted rejected product: "${product.title}"`)
     await fetchAdminData()
   } catch (error) { alert("Error: " + error.message) } finally { isProcessing.value = false }
+}
+const forceVerifyUser = async (user) => {
+  closeDropdown();
+  if (!confirm(`Are you sure you want to bypass KYC and instantly verify ${user.business_name || user.first_name}?`)) return;
+  isProcessing.value = true;
+  try {
+    await supabase.from('profiles').update({ is_verified: true, kyc_doc_type: 'Admin Bypass' }).eq('id', user.id);
+    await logAdminAction('KYC Bypassed', `Force verified @${user.username} for exhibition access.`);
+    alert("User successfully verified!"); await fetchAdminData();
+  } catch (error) { alert("Error: " + error.message); } finally { isProcessing.value = false; }
 }
 const activateUser = async (user) => {
   closeDropdown(); if (!confirm("Restore full access?")) return; isProcessing.value = true
@@ -602,3 +557,15 @@ const deleteUser = async (user) => {
 onMounted(() => { fetchAdminData(); document.addEventListener('click', closeDropdown) })
 onUnmounted(() => { document.removeEventListener('click', closeDropdown) })
 </script>
+
+<style scoped>
+@media print {
+  body * { visibility: hidden; }
+  .no-print { display: none !important; }
+  #printable-area, #printable-area * { visibility: visible; }
+  .print-only-header { display: block !important; margin-bottom: 20px; }
+  #printable-area { position: absolute; left: 0; top: 0; width: 100%; padding: 0 !important; }
+  .table { border-collapse: collapse !important; }
+  .table td, .table th { background-color: #fff !important; border: 1px solid #dee2e6 !important; padding: 8px !important; }
+}
+</style>
