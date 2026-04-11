@@ -24,15 +24,13 @@
                 <i class="bi bi-grid-fill me-3"></i> Feed
               </a>
             </li>
-            
             <li class="nav-item" v-if="currentUser">
-              <a href="#" @click.prevent="currentView = 'listings'" class="nav-link rounded px-3 py-2 d-flex align-items-center" :style="currentView === 'listings' ? 'background-color: #082b59; color: white; font-weight: 700;' : 'color: #111827; font-weight: 500;'">
+              <a href="#" @click.prevent="currentView = 'listings'; activeCategory = 'All'" class="nav-link rounded px-3 py-2 d-flex align-items-center" :style="currentView === 'listings' ? 'background-color: #082b59; color: white; font-weight: 700;' : 'color: #111827; font-weight: 500;'">
                 <i class="bi bi-shop me-3"></i> My Listings
               </a>
             </li>
-            
             <li class="nav-item">
-              <a href="#" @click.prevent="currentView = 'saved'" class="nav-link rounded px-3 py-2 d-flex align-items-center" :style="currentView === 'saved' ? 'background-color: #082b59; color: white; font-weight: 700;' : 'color: #111827; font-weight: 500;'">
+              <a href="#" @click.prevent="currentView = 'saved'; activeCategory = 'All'" class="nav-link rounded px-3 py-2 d-flex align-items-center" :style="currentView === 'saved' ? 'background-color: #082b59; color: white; font-weight: 700;' : 'color: #111827; font-weight: 500;'">
                 <i class="bi bi-bookmark-fill me-3"></i> Saved Items
               </a>
             </li>
@@ -67,11 +65,12 @@
         <div class="d-flex overflow-auto pb-2 mb-4 gap-2" style="-ms-overflow-style: none; scrollbar-width: none;">
           <button @click="currentView = 'feed'; activeCategory = 'All'" class="btn rounded-pill px-4 text-nowrap" :class="currentView === 'feed' && activeCategory === 'All' ? 'bg-dark text-white fw-bold' : 'bg-white border text-dark fw-medium'">All Items</button>
           
-          <button v-if="currentUser" @click="currentView = 'listings'" class="btn rounded-pill px-4 text-nowrap" :class="currentView === 'listings' ? 'bg-dark text-white fw-bold' : 'bg-white border text-dark fw-medium'"><i class="bi bi-shop me-1"></i> My Listings</button>
-          <button @click="currentView = 'saved'" class="btn rounded-pill px-4 text-nowrap" :class="currentView === 'saved' ? 'bg-dark text-white fw-bold' : 'bg-white border text-dark fw-medium'"><i class="bi bi-bookmark-fill me-1"></i> Saved Items</button>
+          <button v-if="currentUser" @click="currentView = 'listings'; activeCategory = 'All'" class="btn rounded-pill px-4 text-nowrap" :class="currentView === 'listings' ? 'bg-dark text-white fw-bold' : 'bg-white border text-dark fw-medium'"><i class="bi bi-shop me-1"></i> My Listings</button>
+          <button @click="currentView = 'saved'; activeCategory = 'All'" class="btn rounded-pill px-4 text-nowrap" :class="currentView === 'saved' ? 'bg-dark text-white fw-bold' : 'bg-white border text-dark fw-medium'"><i class="bi bi-bookmark-fill me-1"></i> Saved Items</button>
           
-          <button @click="currentView = 'feed'; activeCategory = 'Textbooks'" class="btn rounded-pill px-4 text-nowrap" :class="currentView === 'feed' && activeCategory === 'Textbooks' ? 'bg-dark text-white fw-bold' : 'bg-white border text-dark fw-medium'">Textbooks</button>
-          <button @click="currentView = 'feed'; activeCategory = 'IT & Tech'" class="btn rounded-pill px-4 text-nowrap" :class="currentView === 'feed' && activeCategory === 'IT & Tech' ? 'bg-dark text-white fw-bold' : 'bg-white border text-dark fw-medium'">IT & Tech</button>
+          <button v-for="cat in uniqueCategories" :key="cat" @click="currentView = 'feed'; activeCategory = cat" class="btn rounded-pill px-4 text-nowrap" :class="currentView === 'feed' && activeCategory === cat ? 'bg-dark text-white fw-bold' : 'bg-white border text-dark fw-medium'">
+            {{ cat }}
+          </button>
         </div>
 
         <h4 v-if="currentView === 'listings'" class="mb-4 fw-bold" style="color: #082b59;">My Active Listings</h4>
@@ -199,14 +198,22 @@ const toggleSaved = (id) => {
   localStorage.setItem('num_bazaar_saved', JSON.stringify(savedItemIds.value))
 }
 
+// DYNAMIC CATEGORY EXTRACTION
+const uniqueCategories = computed(() => {
+  // Extract all categories, filter out empties, make unique, and sort alphabetically
+  const categories = products.value.map(p => p.category).filter(c => c && c.trim() !== '')
+  return [...new Set(categories)].sort()
+})
+
 const displayedProducts = computed(() => {
   let filtered = products.value
   
   if (currentView.value === 'listings') filtered = filtered.filter(p => p.seller_id === currentUser.value?.id)
   else if (currentView.value === 'saved') filtered = filtered.filter(p => savedItemIds.value.includes(p.id))
 
+  // FILTERING LOGIC FIXED: Checks exact category match dynamically
   if (activeCategory.value !== 'All' && currentView.value === 'feed') {
-    filtered = filtered.filter(p => p.title.toLowerCase().includes(activeCategory.value.toLowerCase().replace('it & tech', 'tech')))
+    filtered = filtered.filter(p => p.category === activeCategory.value)
   }
 
   if (searchQuery.value.trim() !== '') {

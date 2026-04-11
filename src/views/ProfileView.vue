@@ -33,32 +33,8 @@
               <div class="d-flex flex-wrap justify-content-center gap-2 mb-2 mt-2">
                 <span class="badge rounded-pill px-3 py-2 text-uppercase fw-bold" :style="isVendor ? 'background-color: #082b59; color: white;' : 'background-color: #e9ecef; color: #6b7280;'">{{ isVendor ? 'Vendor' : profile.role === 'admin' ? 'Admin' : 'Buyer' }}</span>
                 <span class="badge rounded-pill px-3 py-2 text-uppercase fw-bold" style="background-color: #f3f4f6; color: #111827; border: 1px solid #e5e7eb;">{{ profile.campus_affiliation || 'Student' }}</span>
-                <span v-if="profile.business_sector" class="badge rounded-pill px-3 py-2 text-uppercase fw-bold" style="background-color: #ffe8d6; color: #b22b1d; border: 1px solid #b22b1d;">{{ profile.business_sector }}</span>
               </div>
             </div>
-            
-            <div class="mb-4">
-              <h6 class="fw-bold text-dark text-uppercase small" style="letter-spacing: 0.05em;">Business Description / Bio</h6>
-              <p class="text-secondary small fw-medium" style="line-height: 1.6;">
-                {{ profile.business_desc || 'No description provided yet.' }}
-              </p>
-            </div>
-
-            <div class="d-flex flex-column gap-3 mb-4 border-top pt-4">
-              <div class="d-flex align-items-center text-secondary small fw-medium">
-                <i class="bi bi-envelope-fill me-3 fs-5" style="color: #082b59;"></i> {{ profile.email || 'Hidden' }}
-              </div>
-              <div class="d-flex align-items-center text-secondary small fw-medium">
-                <i class="bi bi-telephone-fill me-3 fs-5" style="color: #082b59;"></i> {{ profile.phone_number || 'Not provided' }}
-              </div>
-              <div class="d-flex align-items-center text-secondary small fw-medium" v-if="profile.dob">
-                <i class="bi bi-gift-fill me-3 fs-5" style="color: #082b59;"></i> {{ new Date(profile.dob).toLocaleDateString() }}
-              </div>
-              <div class="d-flex align-items-center text-secondary small fw-medium">
-                <i class="bi bi-calendar-check-fill me-3 fs-5" style="color: #082b59;"></i> Joined {{ new Date(profile.created_at || Date.now()).toLocaleDateString() }}
-              </div>
-            </div>
-
             <button v-if="isOwnProfile && !isEditing" @click="isEditing = true" class="btn w-100 rounded-pill fw-bold py-2" style="background-color: #f3f4f6; color: #111827; border: 1px solid #e5e7eb; transition: all 0.2s;"><i class="bi bi-pencil-square me-2"></i> Edit Profile</button>
           </div>
         </div>
@@ -94,8 +70,9 @@
                   <label class="form-label small fw-bold text-uppercase text-dark">Cover Banner Image</label>
                   <input type="file" class="form-control" accept="image/*" @change="e => handleFileUpload(e, 'cover')" style="background-color: #e9ecef; border: none; border-radius: 12px; padding: 10px 15px; font-weight: 500; color: #111827;">
                 </div>
-                <div class="col-md-6 mb-2"><label class="form-label small fw-bold text-uppercase text-dark">First Name</label><input type="text" v-model="editForm.first_name" class="form-control bg-light border-0 rounded-3"></div>
-                <div class="col-md-6 mb-2"><label class="form-label small fw-bold text-uppercase text-dark">Business Name</label><input type="text" v-model="editForm.business_name" class="form-control bg-light border-0 rounded-3"></div>
+                <div class="col-md-4 mb-2"><label class="form-label small fw-bold text-uppercase text-dark">First Name</label><input type="text" v-model="editForm.first_name" class="form-control bg-light border-0 rounded-3"></div>
+                <div class="col-md-4 mb-2"><label class="form-label small fw-bold text-uppercase text-dark">Business Name</label><input type="text" v-model="editForm.business_name" class="form-control bg-light border-0 rounded-3"></div>
+                <div class="col-md-4 mb-2"><label class="form-label small fw-bold text-uppercase text-dark">WhatsApp Number</label><input type="tel" v-model="editForm.phone_number" class="form-control bg-light border-0 rounded-3"></div>
                 <div class="col-12"><label class="form-label small fw-bold text-uppercase text-dark">Business Description / Bio</label><textarea v-model="editForm.business_desc" class="form-control bg-light border-0 rounded-3" rows="4"></textarea></div>
               </div>
               <div class="d-flex justify-content-end gap-3 pt-3 border-top">
@@ -265,7 +242,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { supabase } from '../lib/supabaseClient'
 
-const ADMIN_WA_NUMBER = '2348133874904' // Global Admin WhatsApp
+const ADMIN_WA_NUMBER = '2348133874906' // Updated Global Admin WhatsApp
 const route = useRoute()
 const isLoading = ref(true)
 const isProcessing = ref(false)
@@ -342,6 +319,7 @@ onMounted(async () => {
         editForm.value = {
           first_name: profile.value.first_name || '',
           business_name: profile.value.business_name || '',
+          phone_number: profile.value.phone_number || '',
           business_desc: profile.value.business_desc || ''
         }
       } else {
@@ -523,6 +501,7 @@ const saveProfile = async () => {
     const { error } = await supabase.from('profiles').update({
       first_name: editForm.value.first_name,
       business_name: editForm.value.business_name,
+      phone_number: editForm.value.phone_number,
       business_desc: editForm.value.business_desc,
       profile_image: editForm.value.profile_image,
       cover_image: editForm.value.cover_image

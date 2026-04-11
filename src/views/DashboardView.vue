@@ -208,7 +208,7 @@ import { ref, onMounted, computed } from 'vue'
 import { supabase } from '../lib/supabaseClient'
 import { useRouter } from 'vue-router'
 
-const ADMIN_WA_NUMBER = '2348133874904' // Global Admin WhatsApp
+const ADMIN_WA_NUMBER = '2348133874906' 
 
 const router = useRouter()
 const currentUser = ref(null)
@@ -338,8 +338,12 @@ const launchPaystack = () => {
 };
 
 const requestWithdrawal = async () => {
-  if (withdrawForm.value.amount > profile.value.wallet_balance) return alert("You cannot withdraw more than your available balance.");
-  if (withdrawForm.value.amount < 100) return alert("Minimum withdrawal amount is ₦100.");
+  // STRICT MATHEMATICAL VALIDATION
+  const reqAmount = Number(withdrawForm.value.amount);
+  const currentBal = Number(profile.value.wallet_balance || 0);
+
+  if (reqAmount > currentBal) return alert("You cannot withdraw more than your available balance.");
+  if (reqAmount < 100) return alert("Minimum withdrawal amount is ₦100.");
 
   const finalBankName = withdrawForm.value.bankName === 'Other' ? withdrawForm.value.customBankName : withdrawForm.value.bankName;
   if (!finalBankName.trim()) return alert("Please specify your bank name.");
@@ -347,13 +351,13 @@ const requestWithdrawal = async () => {
 
   isWithdrawing.value = true;
   try {
-    const newBalance = Number(profile.value.wallet_balance) - Number(withdrawForm.value.amount);
+    const newBalance = currentBal - reqAmount;
     const { error: updateError } = await supabase.from('profiles').update({ wallet_balance: newBalance }).eq('id', currentUser.value.id);
     if (updateError) throw updateError;
 
     const { error: txError } = await supabase.from('transactions').insert([{
       profile_id: currentUser.value.id,
-      amount: withdrawForm.value.amount,
+      amount: reqAmount,
       type: 'debit',
       status: 'Pending',
       description: `Manual Payout - ${finalBankName} | Acct: ${withdrawForm.value.accountNumber} | Name: ${withdrawForm.value.accountName}`
@@ -363,7 +367,7 @@ const requestWithdrawal = async () => {
     
     alert("Withdrawal requested successfully! Notifying Admin...");
     
-    const msg = `Hello Admin, I have requested a payout of *₦${withdrawForm.value.amount}* to ${finalBankName} (${withdrawForm.value.accountNumber} - ${withdrawForm.value.accountName}). \n\nMy username is @${profile.value.username}.`;
+    const msg = `Hello Admin, I have requested a payout of *₦${reqAmount.toLocaleString()}* to ${finalBankName} (${withdrawForm.value.accountNumber} - ${withdrawForm.value.accountName}). \n\nMy username is @${profile.value.username}.`;
     window.open(`https://wa.me/${ADMIN_WA_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
     
     profile.value.wallet_balance = newBalance;

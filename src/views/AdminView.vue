@@ -242,7 +242,16 @@
             
             <div class="table-responsive">
               <table class="table align-middle">
-                <thead class="bg-light text-secondary small text-uppercase"><tr><th class="py-3 border-0 rounded-start">User</th><th class="py-3 border-0">Role</th><th class="py-3 border-0">Status</th><th class="py-3 border-0">KYC</th><th class="py-3 border-0 text-end rounded-end">Actions</th></tr></thead>
+                <thead class="bg-light text-secondary small text-uppercase">
+                  <tr>
+                    <th class="py-3 border-0 rounded-start">User</th>
+                    <th class="py-3 border-0">Role</th>
+                    <th class="py-3 border-0">Balances</th>
+                    <th class="py-3 border-0">Status</th>
+                    <th class="py-3 border-0">KYC</th>
+                    <th class="py-3 border-0 text-end rounded-end">Actions</th>
+                  </tr>
+                </thead>
                 <tbody>
                   <tr v-for="user in filteredUsers" :key="user.id">
                     <td class="py-3">
@@ -250,6 +259,15 @@
                       <small class="text-secondary fw-medium">@{{ user.username || 'user' }}</small>
                     </td>
                     <td><span class="badge" :style="user.role === 'seller' ? 'background-color: #082b59;' : 'background-color: #6b7280;'">{{ user.role.toUpperCase() }}</span></td>
+                    
+                    <td>
+                      <div v-if="['seller', 'external'].includes(user.role)">
+                        <div class="small fw-black text-success mb-1" style="font-size: 0.75rem;">W: ₦{{ Number(user.wallet_balance || 0).toLocaleString() }}</div>
+                        <div class="small fw-black" style="color: #f59e0b; font-size: 0.75rem;">E: ₦{{ Number(user.escrow_balance || 0).toLocaleString() }}</div>
+                      </div>
+                      <span v-else class="text-muted small fw-medium">N/A</span>
+                    </td>
+
                     <td>
                       <span v-if="user.status === 'active'" class="badge bg-success-subtle text-success">Active</span>
                       <div v-else-if="user.status === 'suspended'"><span class="badge bg-warning-subtle text-warning d-block mb-1">Suspended</span><small class="text-secondary" style="font-size: 0.65rem;" v-if="user.suspension_ends_at">Until: {{ new Date(user.suspension_ends_at).toLocaleDateString() }}</small></div>
@@ -428,12 +446,23 @@ const fetchAdminData = async () => {
   isLoading.value = false
 }
 
+// Universal WhatsApp Redirection Helper with Fallback
 const openUserWA = (phone, text) => {
-  if (!phone) return;
+  if (!phone) {
+    alert("Action recorded successfully, but the user has not provided a phone number to notify via WhatsApp.");
+    return;
+  }
   let cleanPhone = phone.replace(/\D/g, '');
   if (cleanPhone.startsWith('0')) cleanPhone = '234' + cleanPhone.slice(1);
   if (cleanPhone.startsWith('+')) cleanPhone = cleanPhone.slice(1);
-  window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`, '_blank');
+  
+  const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
+  const newWin = window.open(waUrl, '_blank');
+  
+  // Fallback if browser's aggressive popup blocker stops window.open
+  if (!newWin || newWin.closed || typeof newWin.closed === 'undefined') {
+    window.location.href = waUrl;
+  }
 }
 
 const sendBroadcast = async () => {
@@ -494,7 +523,8 @@ const approveKYC = async (user) => {
     const msg = `🎉 *KYC APPROVED*\n\nHello ${user.business_name || user.first_name}, your identity document has been approved! You now have full verified access to NUM BAZAAR.`;
     openUserWA(user.phone_number, msg);
 
-    selectedKYCUser.value = null; window.dispatchEvent(new Event('admin_action_completed')); await fetchAdminData()
+    selectedKYCUser.value = null; 
+    window.dispatchEvent(new Event('admin_action_completed')); await fetchAdminData()
   } catch (error) { alert("Error: " + error.message) } finally { isProcessing.value = false }
 }
 const rejectKYC = async (user) => {
@@ -506,14 +536,20 @@ const rejectKYC = async (user) => {
     alert("KYC Rejected."); selectedKYCUser.value = null; window.dispatchEvent(new Event('admin_action_completed')); await fetchAdminData()
   } catch (error) { alert("Error: " + error.message) } finally { isProcessing.value = false }
 }
+
+// FIXED PAYOUT REDIRECT AND DESCRIPTION RETENTION
 const markAsPaid = async (req) => {
   if (!confirm("Are you sure you have physically transferred this money?")) return;
   isProcessing.value = true
   try {
-    await supabase.from('transactions').update({ status: 'Completed', description: 'Paid via Bank Transfer' }).eq('id', req.id)
+    // Only update status to preserve the bank details in the description
+    await supabase.from('transactions').update({ status: 'Completed' }).eq('id', req.id)
     await logAdminAction('Payout Completed', `Processed ₦${req.amount} payout for @${req.profiles?.username || 'user'}`)
     
-    const msg = `💰 *PAYOUT PROCESSED*\n\nHello ${req.profiles?.business_name || req.profiles?.first_name}, your payout of ₦${req.amount} has been successfully transferred to your bank account.`;
+    // Extract the original bank details string
+    const bankDetails = req.description ? req.description.replace('Manual Payout - ', '') : 'your provided bank account';
+
+    const msg = `💰 *PAYOUT PROCESSED*\n\nHello ${req.profiles?.business_name || req.profiles?.first_name},\n\nYour payout request of *₦${req.amount.toLocaleString()}* has been successfully processed and the funds have been sent to the following account details:\n\n${bankDetails}\n\nThank you for selling on NUM BAZAAR!`;
     openUserWA(req.profiles?.phone_number, msg);
 
     window.dispatchEvent(new Event('admin_action_completed')); await fetchAdminData()
@@ -557,7 +593,6 @@ const rejectProduct = async (product) => {
   } catch (error) { alert("Error: " + error.message) } finally { isProcessing.value = false }
 }
 
-// FIXED: INJECTS DUMMY DATA SO FRONTEND CHECKS PASS INSTANTLY
 const forceVerifyUser = async (user) => {
   closeDropdown();
   if (!confirm(`Are you sure you want to bypass KYC and instantly verify ${user.business_name || user.first_name}?`)) return;
@@ -566,7 +601,7 @@ const forceVerifyUser = async (user) => {
     await supabase.from('profiles').update({ 
       is_verified: true, 
       kyc_doc_type: 'Admin Bypass',
-      id_card_url: 'https://via.placeholder.com/400x200.png?text=Verified+by+Admin' // Prevents missing-image bugs
+      id_card_url: 'https://via.placeholder.com/400x200.png?text=Verified+by+Admin' 
     }).eq('id', user.id);
     
     await logAdminAction('KYC Bypassed', `Force verified @${user.username} for exhibition access.`);
@@ -615,19 +650,16 @@ const banUser = async (user) => {
   } catch (error) { alert("Error: " + error.message) } finally { isProcessing.value = false }
 }
 
-// FIXED: TRUE "KILL SWITCH" THAT WIPES ALL DATA CASCADINGLY
 const deleteUser = async (user) => {
   closeDropdown(); if (!confirm("CRITICAL WARNING: This will permanently delete ALL user products, transactions, tickets, and data. Proceed?")) return; 
   isProcessing.value = true
   try {
-    // 1. Wipe all relational tables first
     await supabase.from('products').delete().eq('seller_id', user.id)
     await supabase.from('transactions').delete().eq('profile_id', user.id)
     await supabase.from('support_tickets').delete().eq('user_id', user.id)
     await supabase.from('reviews').delete().eq('reviewer_id', user.id)
     await supabase.from('in_app_notifications').delete().eq('user_id', user.id)
     
-    // 2. Soft delete profile to maintain core auth relationship, but wipe all PII
     await supabase.from('profiles').update({ 
       status: 'deleted', 
       business_name: 'Deleted User', 
