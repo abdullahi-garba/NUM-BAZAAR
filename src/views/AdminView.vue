@@ -240,7 +240,9 @@
               </select>
             </div>
             
-            <div class="table-responsive">
+            <div v-if="filteredUsers.length === 0" class="text-center text-muted py-5"><h5 class="fw-bold">No users match this filter.</h5></div>
+            
+            <div v-else class="table-responsive">
               <table class="table align-middle">
                 <thead class="bg-light text-secondary small text-uppercase">
                   <tr>
@@ -255,7 +257,7 @@
                 <tbody>
                   <tr v-for="user in filteredUsers" :key="user.id">
                     <td class="py-3">
-                      <div class="fw-bold text-dark" :class="{'text-decoration-line-through text-muted': user.status === 'deleted'}">{{ user.business_name || user.first_name || 'Anonymous' }}</div>
+                      <div class="fw-bold text-dark">{{ user.business_name || user.first_name || 'Anonymous' }}</div>
                       <small class="text-secondary fw-medium">@{{ user.username || 'user' }}</small>
                     </td>
                     <td><span class="badge" :style="user.role === 'seller' ? 'background-color: #082b59;' : 'background-color: #6b7280;'">{{ user.role.toUpperCase() }}</span></td>
@@ -272,7 +274,6 @@
                       <span v-if="user.status === 'active'" class="badge bg-success-subtle text-success">Active</span>
                       <div v-else-if="user.status === 'suspended'"><span class="badge bg-warning-subtle text-warning d-block mb-1">Suspended</span><small class="text-secondary" style="font-size: 0.65rem;" v-if="user.suspension_ends_at">Until: {{ new Date(user.suspension_ends_at).toLocaleDateString() }}</small></div>
                       <span v-else-if="user.status === 'banned'" class="badge bg-danger-subtle text-danger">Banned</span>
-                      <span v-else-if="user.status === 'deleted'" class="badge bg-dark text-white">Deleted</span>
                     </td>
                     <td>
                       <span v-if="user.is_verified" class="text-success fw-bold small"><i class="bi bi-patch-check-fill me-1"></i>Verified</span>
@@ -280,7 +281,7 @@
                       <span v-else class="text-secondary small fw-medium">Not Submitted</span>
                     </td>
                     <td class="text-end">
-                      <div class="dropdown position-relative" v-if="user.status !== 'deleted'">
+                      <div class="dropdown position-relative">
                         <button @click="toggleDropdown(user.id, $event)" class="btn btn-sm btn-light border fw-bold rounded-pill dropdown-toggle" type="button" :disabled="isProcessing">Actions</button>
                         <ul class="dropdown-menu dropdown-menu-end shadow border-0" :class="{ 'show d-block': openDropdownId === user.id }" style="position: absolute; z-index: 1050; margin-top: 5px;">
                           <li><button @click="viewUserLogs(user.username)" class="dropdown-item text-dark fw-bold py-2"><i class="bi bi-file-text-fill me-2"></i>View Activity Logs</button></li>
@@ -292,10 +293,9 @@
                           <li><button v-if="user.status === 'active'" @click="suspendUser(user)" class="dropdown-item text-warning fw-bold py-2"><i class="bi bi-pause-circle me-2"></i>Suspend (Set Time)</button></li>
                           <li><button v-if="user.status !== 'banned'" @click="banUser(user)" class="dropdown-item text-danger fw-bold py-2"><i class="bi bi-slash-circle me-2"></i>Permanently Ban</button></li>
                           
-                          <li><button @click="deleteUser(user)" class="dropdown-item text-dark fw-black py-2"><i class="bi bi-trash3-fill me-2"></i>Wipe Data & Account</button></li>
+                          <li><button @click="hardDeleteUser(user)" class="dropdown-item text-dark fw-black py-2"><i class="bi bi-trash3-fill me-2"></i>Wipe Data & Account</button></li>
                         </ul>
                       </div>
-                      <span v-else class="text-muted small fw-bold">Wiped</span>
                     </td>
                   </tr>
                 </tbody>
@@ -446,7 +446,6 @@ const fetchAdminData = async () => {
   isLoading.value = false
 }
 
-// Universal WhatsApp Redirection Helper with Fallback
 const openUserWA = (phone, text) => {
   if (!phone) {
     alert("Action recorded successfully, but the user has not provided a phone number to notify via WhatsApp.");
@@ -459,7 +458,6 @@ const openUserWA = (phone, text) => {
   const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
   const newWin = window.open(waUrl, '_blank');
   
-  // Fallback if browser's aggressive popup blocker stops window.open
   if (!newWin || newWin.closed || typeof newWin.closed === 'undefined') {
     window.location.href = waUrl;
   }
@@ -537,18 +535,14 @@ const rejectKYC = async (user) => {
   } catch (error) { alert("Error: " + error.message) } finally { isProcessing.value = false }
 }
 
-// FIXED PAYOUT REDIRECT AND DESCRIPTION RETENTION
 const markAsPaid = async (req) => {
   if (!confirm("Are you sure you have physically transferred this money?")) return;
   isProcessing.value = true
   try {
-    // Only update status to preserve the bank details in the description
     await supabase.from('transactions').update({ status: 'Completed' }).eq('id', req.id)
     await logAdminAction('Payout Completed', `Processed ₦${req.amount} payout for @${req.profiles?.username || 'user'}`)
     
-    // Extract the original bank details string
     const bankDetails = req.description ? req.description.replace('Manual Payout - ', '') : 'your provided bank account';
-
     const msg = `💰 *PAYOUT PROCESSED*\n\nHello ${req.profiles?.business_name || req.profiles?.first_name},\n\nYour payout request of *₦${req.amount.toLocaleString()}* has been successfully processed and the funds have been sent to the following account details:\n\n${bankDetails}\n\nThank you for selling on NUM BAZAAR!`;
     openUserWA(req.profiles?.phone_number, msg);
 
@@ -650,38 +644,51 @@ const banUser = async (user) => {
   } catch (error) { alert("Error: " + error.message) } finally { isProcessing.value = false }
 }
 
-const deleteUser = async (user) => {
-  closeDropdown(); if (!confirm("CRITICAL WARNING: This will permanently delete ALL user products, transactions, tickets, and data. Proceed?")) return; 
-  isProcessing.value = true
+// -------------------------------------------------------------
+// FIXED: TRUE HARD DELETE IMPLEMENTATION
+// -------------------------------------------------------------
+const hardDeleteUser = async (user) => {
+  closeDropdown(); 
+  
+  // Extra security confirmation for a destructive action
+  const confirmText = prompt(`CRITICAL WARNING: This will permanently hard-delete ALL data associated with @${user.username} from the database. This action cannot be undone.\n\nType 'DELETE' to confirm:`);
+  
+  if (confirmText !== 'DELETE') {
+    alert("Action aborted. User data was not deleted.");
+    return;
+  }
+
+  isProcessing.value = true;
   try {
-    await supabase.from('products').delete().eq('seller_id', user.id)
-    await supabase.from('transactions').delete().eq('profile_id', user.id)
-    await supabase.from('support_tickets').delete().eq('user_id', user.id)
-    await supabase.from('reviews').delete().eq('reviewer_id', user.id)
-    await supabase.from('in_app_notifications').delete().eq('user_id', user.id)
+    // 1. Cascading Hard Deletes of Relational Data
+    // We must delete from these tables first to satisfy PostgreSQL Foreign Key constraints
+    await supabase.from('products').delete().eq('seller_id', user.id);
+    await supabase.from('transactions').delete().eq('profile_id', user.id);
+    await supabase.from('support_tickets').delete().eq('user_id', user.id);
+    await supabase.from('reviews').delete().eq('reviewer_id', user.id);
+    await supabase.from('in_app_notifications').delete().eq('user_id', user.id);
+    await supabase.from('orders').delete().eq('seller_id', user.id);
+    await supabase.from('orders').delete().eq('buyer_id', user.id);
     
-    await supabase.from('profiles').update({ 
-      status: 'deleted', 
-      business_name: 'Deleted User', 
-      first_name: 'Deleted', 
-      last_name: 'User', 
-      username: 'deleted_' + user.id.substring(0,6), 
-      profile_image: null, 
-      cover_image: null,
-      phone_number: null,
-      email: 'deleted@numbazaar.com',
-      id_card_url: null, 
-      kyc_doc_type: null,
-      is_verified: false,
-      wallet_balance: 0,
-      escrow_balance: 0
-    }).eq('id', user.id)
+    // Note: We update the status to 'deleted' FIRST so the Kill Switch kicks them out of the frontend instantly
+    await supabase.from('profiles').update({ status: 'deleted' }).eq('id', user.id);
+
+    // 2. Finally, Hard Delete the profile row completely from the database
+    const { error: finalDeleteError } = await supabase.from('profiles').delete().eq('id', user.id);
     
-    await logAdminAction('Account Deleted', `Wiped all data for @${user.username}.`)
-    alert("User data completely wiped and session terminated."); 
+    if (finalDeleteError) throw finalDeleteError;
+    
+    await logAdminAction('Account Hard Deleted', `Permanently dropped all data and wiped profile row for @${user.username}.`);
+    
+    alert("User data completely wiped from the database."); 
     window.dispatchEvent(new Event('admin_action_completed')); 
-    await fetchAdminData()
-  } catch (error) { alert("Error: " + error.message) } finally { isProcessing.value = false }
+    await fetchAdminData();
+    
+  } catch (error) { 
+    alert("Hard Delete Error: " + error.message); 
+  } finally { 
+    isProcessing.value = false; 
+  }
 }
 
 onMounted(() => { fetchAdminData(); document.addEventListener('click', closeDropdown) })
