@@ -233,7 +233,6 @@ const requestENTFastTrack = () => {
   
   const username = profileData.value?.username || currentUser.value?.email || "Student";
   const businessName = profileData.value?.business_name || "N/A";
-  npm run dev
 
   const message = `Hello Admin, I am an ENT211 student. My username is *${username}* and my business name is *${businessName}*. I need verification so I can list my products for the exhibition.`;
   
