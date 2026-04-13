@@ -11,6 +11,9 @@
         <button @click="router.push(`/profile/${currentUser.id}`)" class="btn btn-lg w-100 fw-bold rounded-pill shadow-sm" style="background-color: #082b59; color: white;">
           Submit KYC Document Now <i class="bi bi-arrow-right ms-2"></i>
         </button>
+        <button @click="requestENTFastTrack" class="btn btn-success fw-bold text-white mt-2 w-100 d-flex justify-content-center align-items-center gap-2">
+        <i class="bi bi-whatsapp"></i> Request ENT211 Fast-Track
+        </button>
       </div>
     </div>
 
@@ -223,6 +226,19 @@ const displayedProducts = computed(() => {
 
   return filtered
 })
+
+const requestENTFastTrack = () => {
+  // You will replace this with the actual Admin WhatsApp number
+  const adminWhatsAppNumber = "234XXXXXXXXXX"; 
+  
+  const username = profileData.value?.username || currentUser.value?.email || "Student";
+  const businessName = profileData.value?.business_name || "N/A";
+  
+  const message = `Hello Admin, I am an ENT211 student. My username is *${username}* and my business name is *${businessName}*. I need a force verification so I can list my products for the Wednesday exhibition.`;
+  
+  const whatsappUrl = `https://wa.me/${adminWhatsAppNumber}?text=${encodeURIComponent(message)}`;
+  window.open(whatsappUrl, '_blank');
+};
 </script>
 
 <style scoped>
