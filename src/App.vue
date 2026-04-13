@@ -11,10 +11,9 @@
         
         <div class="d-flex align-items-center gap-4">
           <router-link to="/shop" class="nav-link-stitch" active-class="nav-active">Feed</router-link>
-          <router-link to="/dashboard" class="nav-link-stitch" active-class="nav-active" v-if="['seller', 'admin'].includes(userRole)">Post</router-link>
+          <router-link to="/dashboard" class="nav-link-stitch" active-class="nav-active" v-if="['seller', 'external', 'admin'].includes(userRole)">Post</router-link>
           <router-link :to="`/profile/${currentUser.id}`" class="nav-link-stitch" active-class="nav-active">Profile</router-link>
           <router-link to="/cart" class="nav-link-stitch" active-class="nav-active">Cart</router-link>
-          <router-link to="/about" class="nav-link-stitch" active-class="nav-active">About</router-link>
           
           <router-link v-if="userRole === 'admin'" to="/admin" class="nav-link-stitch text-warning fw-bold position-relative" active-class="nav-active" style="letter-spacing: 0.05em;">
             <i class="bi bi-shield-lock-fill me-1"></i> Admin
@@ -80,7 +79,7 @@
           <span v-if="cartCount > 0" class="position-absolute badge rounded-pill shadow-sm" style="background-color: #b22b1d; color: white; top: -2px; right: 15px; font-size: 0.6rem;">{{ cartCount }}</span>
         </router-link>
 
-        <router-link v-if="['seller', 'admin'].includes(userRole)" to="/dashboard" class="nav-item text-center text-decoration-none" active-class="active-bottom-tab" style="color: #6b7280; flex: 1;">
+        <router-link v-if="['seller', 'external', 'admin'].includes(userRole)" to="/dashboard" class="nav-item text-center text-decoration-none" active-class="active-bottom-tab" style="color: #6b7280; flex: 1;">
           <i class="bi bi-plus-circle-fill fs-4 d-block mb-1"></i>
           <span class="d-block fw-bold text-uppercase" style="font-size: 0.6rem; letter-spacing: 0.05em;">Post</span>
         </router-link>
@@ -97,6 +96,10 @@
         </router-link>
       </div>
     </div>
+
+    <router-link v-if="currentUser" to="/about" class="btn rounded-circle shadow-lg d-flex justify-content-center align-items-center about-fab" title="About NUM BAZAAR">
+      <i class="bi bi-info-lg fs-3 text-white"></i>
+    </router-link>
 
     <router-link v-if="currentUser" to="/support" class="btn rounded-circle shadow-lg d-flex justify-content-center align-items-center support-fab" title="Need Help?">
       <i class="bi bi-headset fs-3 text-white"></i>
@@ -172,7 +175,6 @@ const fetchRoleAndAlerts = async (userId) => {
   const { data } = await supabase.from('profiles').select('role, status').eq('id', userId).single()
   
   if (data) {
-    // KILL SWITCH: Auto-Logout if banned or deleted
     if (data.status === 'banned' || data.status === 'deleted') {
       alert("Your account access has been revoked. Please contact support.");
       await handleSignOut();
@@ -203,7 +205,6 @@ onMounted(async () => {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'in_app_notifications', filter: `user_id=eq.${session.user.id}` }, () => {
         bellCount.value++
       })
-      // REALTIME KILL SWITCH LISTENER
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${session.user.id}` }, (payload) => {
         if (payload.new.status === 'banned' || payload.new.status === 'deleted') {
           alert("Session Terminated: Your account access has been revoked by the Administrator.");
@@ -256,7 +257,19 @@ const handleSignOut = async () => {
 .nav-item { transition: transform 0.2s ease, color 0.2s ease; }
 .active-bottom-tab { color: #082b59 !important; transform: translateY(-2px); }
 .signout-btn:hover { background-color: rgba(255,255,255,0.2) !important; color: white !important; }
+
+/* BASE SUPPORT FAB */
 .support-fab { position: fixed; width: 60px; height: 60px; background-color: #b22b1d; color: white; right: 25px; bottom: 25px; z-index: 1040; transition: transform 0.2s ease; border: none; }
 .support-fab:hover { transform: scale(1.08); }
-@media (max-width: 991px) { .support-fab { bottom: 95px; right: 20px; width: 55px; height: 55px; } .global-footer { padding-bottom: 90px !important; } }
+
+/* NEW ABOUT FAB (Stacked Above Support) */
+.about-fab { position: fixed; width: 60px; height: 60px; background-color: #082b59; color: white; right: 25px; bottom: 95px; z-index: 1040; transition: transform 0.2s ease; border: 2px solid white; }
+.about-fab:hover { transform: scale(1.08); }
+
+@media (max-width: 991px) { 
+  /* Shift both up on mobile to clear the bottom navigation bar */
+  .support-fab { bottom: 95px; right: 20px; width: 55px; height: 55px; } 
+  .about-fab { bottom: 160px; right: 20px; width: 55px; height: 55px; }
+  .global-footer { padding-bottom: 90px !important; } 
+}
 </style>
