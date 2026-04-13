@@ -12,7 +12,7 @@
           Submit KYC Document Now <i class="bi bi-arrow-right ms-2"></i>
         </button>
         <button @click="requestENTFastTrack" class="btn btn-success fw-bold text-white mt-2 w-100 d-flex justify-content-center align-items-center gap-2">
-        <i class="bi bi-whatsapp"></i> Request ENT211 Fast-Track
+        <i class="bi bi-whatsapp"></i> verify on whatsapp (ENT211 students only)
         </button>
       </div>
     </div>
