@@ -12,7 +12,7 @@
           Submit KYC Document Now <i class="bi bi-arrow-right ms-2"></i>
         </button>
         <button @click="requestENTFastTrack" class="btn btn-success fw-bold text-white mt-2 w-100 d-flex justify-content-center align-items-center gap-2">
-        <i class="bi bi-whatsapp"></i> verify on whatsapp (ENT211 students only)
+        <i class="bi bi-whatsapp"></i> verify on whatsapp (ENT211 students only) <p> message 08133874906</p>
         </button>
       </div>
     </div>
@@ -228,7 +228,6 @@ const displayedProducts = computed(() => {
 })
 
 const requestENTFastTrack = () => {
-  // You will replace this with the actual Admin WhatsApp number
   const adminWhatsAppNumber = "2348133874906"; 
   
   const username = profileData.value?.username || currentUser.value?.email || "Student";
