@@ -6,13 +6,10 @@
         <i class="bi bi-shield-lock-fill d-block mb-3" style="font-size: 4rem; color: #b22b1d;"></i>
         <h2 class="fw-black text-dark mb-3">Identity Verification Required</h2>
         <p class="text-secondary fw-medium mb-4">
-          For the security of the Newgate University community, all students and staff must verify their identity before accessing the marketplace.
+          For the security of the Newgate University community, all students and staff must verify their identity before accessing the marketplace. or message the admin on whatsapp via 08133874906.
         </p>
         <button @click="router.push(`/profile/${currentUser.id}`)" class="btn btn-lg w-100 fw-bold rounded-pill shadow-sm" style="background-color: #082b59; color: white;">
           Submit KYC Document Now <i class="bi bi-arrow-right ms-2"></i>
-        </button>
-        <button @click="requestENTFastTrack" class="btn btn-success fw-bold text-white mt-2 w-100 d-flex justify-content-center align-items-center gap-2">
-        <i class="bi bi-whatsapp"></i> verify on whatsapp (ENT211 students only) <p> message 08133874906</p>
         </button>
       </div>
     </div>
