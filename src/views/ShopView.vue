@@ -224,17 +224,7 @@ const displayedProducts = computed(() => {
   return filtered
 })
 
-const requestENTFastTrack = () => {
-  const adminWhatsAppNumber = "2348133874906"; 
-  
-  const username = profileData.value?.username || currentUser.value?.email || "Student";
-  const businessName = profileData.value?.business_name || "N/A";
 
-  const message = `Hello Admin, I am an ENT211 student. My username is *${username}* and my business name is *${businessName}*. I need verification so I can list my products for the exhibition.`;
-  
-  const whatsappUrl = `https://wa.me/${adminWhatsAppNumber}?text=${encodeURIComponent(message)}`;
-  window.open(whatsappUrl, '_blank');
-};
 </script>
 
 <style scoped>
