@@ -42,7 +42,7 @@
             </button>
           </div>
         </div>
-
+    
       </div>
     </nav>
 
@@ -115,20 +115,10 @@
           <div class="col-lg-4 text-center text-lg-start">
             <h4 class="text-white fw-black fst-italic mb-3" style="letter-spacing: -0.05em;">NUM BAZAAR</h4>
             <p class="small text-white-50 fw-medium mb-0" style="line-height: 1.6;">
-              The exclusive marketplace for Newgate University. Verified, Secured, and Student-First since 2024.
+              The exclusive marketplace for Newgate University. Verified, Secured, and Student-First.
             </p>
           </div>
           <div class="col-6 col-lg-2 offset-lg-2">
-            <h6 class="text-white fw-bold mb-3 small text-uppercase" style="letter-spacing: 0.05em;">Marketplace</h6>
-            <ul class="list-unstyled small text-white-50 fw-medium d-flex flex-column gap-2">
-              <li>Textbook Exchange</li><li>Dorm Essentials</li><li>Tech & Gadgets</li>
-            </ul>
-          </div>
-          <div class="col-6 col-lg-2">
-            <h6 class="text-white fw-bold mb-3 small text-uppercase" style="letter-spacing: 0.05em;">Institution</h6>
-            <ul class="list-unstyled small text-white-50 fw-medium d-flex flex-column gap-2">
-              <li>University Policy</li><li>Safety Guidelines</li><li>Student Discounts</li>
-            </ul>
           </div>
           <div class="col-6 col-lg-2">
             <h6 class="text-white fw-bold mb-3 small text-uppercase" style="letter-spacing: 0.05em;">Support</h6>
@@ -139,11 +129,8 @@
           </div>
         </div>
         <div class="border-top pt-4 mt-4 d-flex flex-column flex-md-row justify-content-between align-items-center text-white-50 small fw-medium" style="border-color: rgba(255,255,255,0.1) !important;">
-          <span class="mb-3 mb-md-0 text-center">&copy; 2026 NEWGATE UNIVERSITY MARKETPLACE. ALL RIGHTS RESERVED.</span>
-          <div class="d-flex gap-4">
-            <span><i class="bi bi-shield-check me-1"></i> VERIFIED SECURE</span>
-            <span><i class="bi bi-lock-fill me-1"></i> SSL PROTECTION</span>
-          </div>
+          <span class="mb-3 mb-md-0 text-center">&copy; 2026 GarbaTheAnalyst. ALL RIGHTS RESERVED.</span>
+          
         </div>
       </div>
     </footer>
